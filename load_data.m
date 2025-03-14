@@ -9,7 +9,7 @@ filelist = dir(fullfile(main_path, '**', '*.txt'));  % Ottieni tutti i file .txt
 disp(filelist);  % Mostra i file trovati
 
 % Contenere i dati
-data_cell = cell(1, numel(filelist));
+data_cell = {};
 
 % Definire il sample rate
 Fs = 20480; % Hz
@@ -17,45 +17,58 @@ Fs = 20480; % Hz
 % Stampa il numero di file trovati prima di entrare nel ciclo
 fprintf('📂 Numero di file trovati: %d\n', numel(filelist));
 
-% Leggere e convertire tutti i file in datatable
-for k = 1:numel(filelist)  % Modifica qui, sostituendo nFiles con numel(filelist)
-    % Costruire il percorso completo del file
-    full_filename = fullfile(filelist(k).folder, filelist(k).name);  % Accedere ai campi folder e name della struttura
+% Ciclo per leggere ogni file
+for k = 1:numel(filelist)
+    full_filename = fullfile(filelist(k).folder, filelist(k).name);
     
-    % Leggere il file come matrice
+    % Leggi i dati dal file
     data = readmatrix(full_filename, 'Delimiter', ' ');
-   
-    % Creare il vettore temporale in secondi
-    num_samples = size(data, 1);
-    time_vector = seconds((0:num_samples-1)' / Fs);  % Vettore temporale come 'duration'
-
-    % Creare il datatable
-    data_cell{k} = {data};  % Passa i dati come una cella con la matrice
-
-    % Stampare il nome del file caricato
-    fprintf('📂 Caricato e convertito in datatable: %s\n', full_filename);
+    [~, nCols] = size(data);
+    fprintf('Il file %s ha %d colonne.\n', full_filename, nCols);
+    
+    % Se il file ha meno di 4 colonne, salta l'elaborazione
+    if nCols < 4
+        warning('Il file %s ha meno di 4 colonne e verrà saltato!', full_filename);
+        continue;
+    end
+    
+    % Crea una struttura contenente i dati e il nome del file
+    data_struct.data = data;
+    data_struct.name = full_filename;  % puoi usare solo il nome se preferisci
+    data_cell{end+1} = data_struct;  % Aggiungi la struttura alla cell array
+    
+    fprintf('📂 Caricato e convertito in struttura: %s\n', full_filename);
 end
 
-% Unire i dati di tutti i file in un'unica tabella
-dataTable = datatable(data_cell, Fs);  % Ottieni la tabella unificata
+% Chiamata della funzione per creare la tabella
+dataTable = datatable(data_cell, Fs);
 
 % Computazione delle caratteristiche nel Diagnostic Feature Designer
 [feature_Table, data_feature_Table] = extract_features(dataTable);  % Estrazione delle caratteristiche
 
 fprintf("Cleaning the features...\n")
 
-%% Pulizia delle caratteristiche rimuovendo i NaN
-feature_Table = standardizeMissing(feature_Table, {-Inf, Inf});  % Rimuovere valori infiniti
-countcolumnNaNs = [zeros(1, 4), sum(isnan(table2array(feature_Table(:, 5:end))))];  % Conta i NaN
+%% Pulizia delle caratteristiche rimuovendo i NaN solo sulle colonne numeriche
+% Standardizza i missing nella tabella (applicabile a tutte le colonne)
+feature_Table = standardizeMissing(feature_Table, {-Inf, Inf});  
 
-% Rimuovere caratteristiche con più del 25% di NaN
-feature_Table(:, find(countcolumnNaNs > size(feature_Table, 1) / 4)) = [];
+% Calcola il numero di NaN solo sulle colonne numeriche (dalla 5 in poi)
+countcolumnNaNs = [zeros(1, 4), sum(isnan(table2array(feature_Table(:, 5:end))))];  
 
-% Sostituire il secondo all'ultimo campione: se una caratteristica è NaN, sostituirla con il valore precedente
-feature_Table = fillmissing(feature_Table, 'previous');
+% Rimuove le colonne numeriche che hanno più del 25% di NaN.
+colsDaRimuovere = find(countcolumnNaNs > size(feature_Table, 1) / 4);
+if ~isempty(colsDaRimuovere)
+    feature_Table(:, colsDaRimuovere) = [];
+end
+
+% Applica fillmissing solo alle colonne numeriche (dalla 5 in poi)
+numericVars = feature_Table(:, 5:end);
+numericVars = fillmissing(numericVars, 'previous');
+feature_Table(:, 5:end) = numericVars;
+
 
 %% Salvataggio dei dati e tentativo di ricaricare la tabella delle caratteristiche
-save('data_feature_Table_zoh.mat', 'data_feature_Table');  % Salvataggio dei dati
+save('data_feature_Table_zoh.mat', 'data_feature_Table', '-v7.3');  % Salvataggio dei dati
 
 clear all  % Pulisce il workspace
 load('data_feature_Table_zoh.mat');  % Ricarica i dati salvati
