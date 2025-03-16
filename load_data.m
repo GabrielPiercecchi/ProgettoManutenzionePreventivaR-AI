@@ -1,5 +1,3 @@
-clear all; clc;
-
 % Definire il percorso principale
 main_path = "B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_training_data\";
 
@@ -68,9 +66,9 @@ feature_Table(:, 5:end) = numericVars;
 
 
 %% Salvataggio dei dati e tentativo di ricaricare la tabella delle caratteristiche
-save('data_feature_Table_zoh.mat', 'data_feature_Table', '-v7.3');  % Salvataggio dei dati
+save('data_feature_Table_zoh.mat', 'data_feature_Table', 'dataTable', '-v7.3');  % Salvataggio dei dati
 
-clear all  % Pulisce il workspace
+% clear all  % Non pulire il workspace se vuoi mantenere le variabili
 load('data_feature_Table_zoh.mat');  % Ricarica i dati salvati
 
 fprintf("Done!\n")

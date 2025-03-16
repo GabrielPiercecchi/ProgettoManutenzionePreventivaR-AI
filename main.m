@@ -1,37 +1,27 @@
-clear all; clc;
+%% main.m
+% Pipeline completa per il progetto PHM America 2023:
+% 1. Caricamento dati (load_data.m)
+% 2. Addestramento del CNN Autoencoder (train_cnn_autoencoder.m)
+%
+% Assicurati che i file "load_data.m" e "train_cnn_autoencoder.m" siano nella stessa cartella
+% e che producano la variabile "dataTable" (load_data.m) e tutto il necessario per il training.
+%
+% Esegui questo file per lanciare l'intero processo.
 
-% Definire il percorso principale
-main_path = "B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_training_data\";
+clear; clc; close all;
 
-% Cercare tutti i file .txt in tutte le sottocartelle
-file_list = dir(fullfile(main_path, '**', '*.txt'));
+%% 1. Caricamento dati
+fprintf('Caricamento dei dati...\n');
+run('load_data.m');  % load_data.m deve creare la variabile "dataTable" nel workspace
 
-% Creare una cell array per contenere i dati
-data_cell = cell(1, numel(file_list));
-
-% Definire il sample rate
-Fs = 20480; % Hz
-
-% Loop su tutti i file trovati
-for k = 1:numel(file_list)
-    % Costruire il percorso completo del file
-    full_filename = fullfile(file_list(k).folder, file_list(k).name);
-
-    % Leggere il file
-    data = readmatrix(full_filename);
-
-    % Creare il vettore temporale in secondi
-    num_samples = size(data, 1);
-    time_vector = seconds((0:num_samples-1)' / Fs);  % Vettore temporale come 'duration'
-
-    % Convertire in timetable
-    data_cell{k} = timetable(time_vector, data(:,1), data(:,2), data(:,3), data(:,4), ...
-        'VariableNames', {'Horizontal_Ax', 'Axial_Ax', 'Vertical_Ax', 'Tachometer'});
-
-    % Stampare il nome del file caricato
-    fprintf('📂 Caricato e convertito in timetable: %s\n', full_filename);
+if ~exist('dataTable','var')
+    error('dataTable non trovato. Verifica il file load_data.m.');
 end
+fprintf('Dati caricati con successo.\n\n');
 
-% Salva i dati in un file .mat
-save('data_saved.mat', 'data_cell', '-v7.3');
-fprintf('✅ Dati salvati in data_saved.mat\n');
+%% 2. Addestramento del CNN Autoencoder
+fprintf('Avvio addestramento del CNN Autoencoder...\n');
+train_cnn_autoencoder;  % Questo script (o funzione) addestra il modello e mostra risultati
+
+fprintf('Addestramento completato.\n');
+fprintf('Pipeline eseguita con successo.\n');
