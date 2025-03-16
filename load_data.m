@@ -19,6 +19,11 @@ fprintf('📂 Numero di file trovati: %d\n', numel(filelist));
 for k = 1:numel(filelist)
     full_filename = fullfile(filelist(k).folder, filelist(k).name);
     
+    % Filtra solo i file che appartengono al livello 0 (Healthy)
+    if ~contains(filelist(k).folder, 'Pitting_degradation_level_0')
+        continue;
+    end
+
     % Leggi i dati dal file
     data = readmatrix(full_filename, 'Delimiter', ' ');
     [~, nCols] = size(data);
@@ -32,7 +37,7 @@ for k = 1:numel(filelist)
     
     % Crea una struttura contenente i dati e il nome del file
     data_struct.data = data;
-    data_struct.name = full_filename;  % puoi usare solo il nome se preferisci
+    data_struct.name = full_filename;  % Puoi usare solo il nome se preferisci
     data_cell{end+1} = data_struct;  % Aggiungi la struttura alla cell array
     
     fprintf('📂 Caricato e convertito in struttura: %s\n', full_filename);
