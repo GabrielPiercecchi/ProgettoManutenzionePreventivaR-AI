@@ -2,6 +2,7 @@
 B - PHM America 2023 - dataset*
 data_feature_Table_zoh.mat
 *.csv
+*.mat
 
 # Windows default autosave extension
 *.asv
