@@ -26,22 +26,22 @@ Training on single CPU.
 |  Epoch  |  Iteration  |  Time Elapsed  |  Mini-batch  |  Mini-batch  |  Base Learning  |
 |         |             |   (hh:mm:ss)   |     RMSE     |     Loss     |      Rate       |
 |========================================================================================|
-|       1 |           1 |       00:00:01 |        33.50 |        561.2 |          0.0010 |
-|       1 |          50 |       00:00:10 |        60.81 |       1848.9 |          0.0010 |
-|       1 |         100 |       00:00:21 |        47.22 |       1114.7 |          0.0010 |
-|       2 |         150 |       00:00:32 |        30.61 |        468.6 |          0.0010 |
-|       2 |         200 |       00:00:42 |        25.41 |        322.9 |          0.0010 |
-|       3 |         250 |       00:00:53 |        15.95 |        127.2 |          0.0010 |
-|       3 |         300 |       00:01:04 |        14.38 |        103.4 |          0.0010 |
-|       4 |         350 |       00:01:14 |        17.83 |        159.0 |          0.0010 |
-|       4 |         400 |       00:01:25 |        25.70 |        330.2 |          0.0010 |
-|       5 |         450 |       00:01:36 |        25.40 |        322.5 |          0.0010 |
-|       5 |         500 |       00:01:47 |        25.18 |        317.0 |          0.0010 |
-|       5 |         550 |       00:01:58 |        24.46 |        299.1 |          0.0010 |
+|       1 |           1 |       00:00:01 |        45.33 |       1027.3 |          0.0010 |
+|       1 |          50 |       00:00:12 |        35.72 |        638.0 |          0.0010 |
+|       1 |         100 |       00:00:22 |        40.02 |        800.9 |          0.0010 |
+|       2 |         150 |       00:00:33 |        34.11 |        581.7 |          0.0010 |
+|       2 |         200 |       00:00:43 |        23.00 |        264.5 |          0.0010 |
+|       3 |         250 |       00:00:54 |        13.15 |         86.5 |          0.0010 |
+|       3 |         300 |       00:01:04 |        16.10 |        129.5 |          0.0010 |
+|       4 |         350 |       00:01:15 |        10.27 |         52.7 |          0.0010 |
+|       4 |         400 |       00:01:24 |        19.12 |        182.9 |          0.0010 |
+|       5 |         450 |       00:01:32 |        40.13 |        805.1 |          0.0010 |
+|       5 |         500 |       00:01:41 |         9.26 |         42.9 |          0.0010 |
+|       5 |         550 |       00:01:49 |        17.63 |        155.4 |          0.0010 |
 |========================================================================================|
 Training finished: Max epochs completed.
 Addestramento completato.
-Soglia di errore (healthy) = 0.2355
+Soglia di errore (healthy) = 0.2214
 
 [STEP 3] Caricamento dati UNHEALTHY (livelli 1..8)...
   [load_data_by_level] Caricamento file .txt...
@@ -57,7 +57,7 @@ Segmenti unhealthy totali: 10782
 
 [STEP 4] Mapping dei segmenti unhealthy...
 Livello medio predetto (unhealthy): 0.05
-Percentuale di segmenti con alta confidenza: 98.86%
+Percentuale di segmenti con alta confidenza: 98.88%
 
 [STEP 5] Analisi dei meta-dati (Motor Speed, Torque) sui dati unhealthy...
 
@@ -74,8 +74,8 @@ Segmentazione dei dati test...
 Segmenti test totali: 4545
 
 [STEP 7] Predizione e mapping sui dati test...
-Livello medio predetto (test): 0.04
-Percentuale di segmenti test con alta confidenza: 98.94%
+Livello medio predetto (test): 0.05
+Percentuale di segmenti test con alta confidenza: 98.83%
 
 [STEP 7] Creazione file di submission per dati test...
 File submission_test.csv creato.
@@ -90,9 +90,16 @@ Segmentazione dei dati validation...
 Segmenti validation totali: 4446
 
 [STEP 8] Elaborazione dati validation e creazione file CSV...
-Livello medio predetto (validation): 0.06
-Percentuale di segmenti validation con alta confidenza: 98.45%
+Livello medio predetto (validation): 0.07
+Percentuale di segmenti validation con alta confidenza: 98.27%
 File submission_validation.csv creato.
+
+[STEP 9] Tuning & Analisi: Visualizzazione di threshold alternativi e statistiche...
+Media errore healthy: 0.0227
+Std errore healthy: 0.0662
+Soglia (media + 3*std): 0.2214
+Soglia alternativa (media + 2*std): 0.1552
+Soglia alternativa (media + 4*std): 0.2876
 
 ==== Fine complete_pipeline_with_analysis.m ====
 >> 

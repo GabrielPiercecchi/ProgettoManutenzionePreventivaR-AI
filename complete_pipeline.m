@@ -103,8 +103,8 @@ fprintf('Soglia di errore (healthy) = %.4f\n', soglia);
 fprintf("\n[STEP 3] Caricamento dati UNHEALTHY (livelli 1..8)...\n");
 dataTable_unhealthy = load_data_by_level(main_path_train, "Pitting_degradation_level_1", ...
     "Pitting_degradation_level_2", "Pitting_degradation_level_3", ...
-    "Pitting_degradation_level_4", "Pitting_degradation_level_5", ...
-    "Pitting_degradation_level_6", "Pitting_degradation_level_7", ...
+    "Pitting_degradation_level_4", ...
+    "Pitting_degradation_level_6", ...
     "Pitting_degradation_level_8");
 fprintf('Numero di file unhealthy caricati: %d\n', height(dataTable_unhealthy));
 
@@ -193,9 +193,11 @@ title('Errore vs V e N (Unhealthy)');
 % STEP 6: CREAZIONE FILE DI SUBMISSION PER I DATI UNHEALTHY
 %% =============================================================================
 fprintf("\n[STEP 6] Creazione file di submission (Unhealthy)...\n");
+colNames = {'sample_id','prob_0','prob_1','prob_2','prob_3','prob_4','prob_5','prob_6','prob_7','prob_8','prob_9','prob_10','confidence'};
 sample_ids_unhealthy = (1:nSeg_unhealthy)';
 submission_unhealthy = [sample_ids_unhealthy, probMatrix_unhealthy, confVec_unhealthy];
-csvwrite('submission_unhealthy.csv', submission_unhealthy);
+T_sub_unhealthy = array2table(submission_unhealthy, 'VariableNames', colNames);
+writetable(T_sub_unhealthy, 'submission_unhealthy.csv');
 fprintf("File submission_unhealthy.csv creato.\n");
 
 %% =============================================================================
@@ -239,9 +241,11 @@ fprintf("Livello medio predetto (test): %.2f\n", mean(predictedLevels_test));
 fprintf("Percentuale di segmenti test con alta confidenza: %.2f%%\n", 100*mean(confVec_test));
 
 fprintf("\n[STEP 7] Creazione file di submission per dati test...\n");
+colNames = {'sample_id','prob_0','prob_1','prob_2','prob_3','prob_4','prob_5','prob_6','prob_7','prob_8','prob_9','prob_10','confidence'};
 sample_ids_test = (1:nSeg_test)';
 submission_test = [sample_ids_test, probMatrix_test, confVec_test];
-csvwrite('submission_test.csv', submission_test);
+T_sub_test = array2table(submission_test, 'VariableNames', colNames);
+writetable(T_sub_test, 'submission_test.csv');
 fprintf("File submission_test.csv creato.\n");
 
 %% =============================================================================
@@ -283,6 +287,34 @@ colNames = {'sample_id','prob_0','prob_1','prob_2','prob_3','prob_4','prob_5','p
 T_sub_val = array2table(submission_val, 'VariableNames', colNames);
 writetable(T_sub_val, 'submission_validation.csv');
 fprintf("File submission_validation.csv creato.\n");
+
+%% =============================================================================
+% STEP 9: Tuning & Analisi: Visualizzazione di threshold alternativi e statistiche
+%% =============================================================================
+fprintf("\n[STEP 9] Tuning & Analisi: Visualizzazione di threshold alternativi e statistiche...\n");
+
+% Calcola soglie alternative basate sui dati healthy
+soglia2 = mean(reconstructionError_healthy) + 2*std(reconstructionError_healthy);
+soglia4 = mean(reconstructionError_healthy) + 4*std(reconstructionError_healthy);
+
+% Visualizza l'istogramma degli errori healthy con le soglie alternative
+figure;
+histogram(reconstructionError_healthy, 50);
+hold on;
+xline(soglia, 'r--', 'Soglia (3*std)');
+xline(soglia2, 'g--', 'Soglia (2*std)');
+xline(soglia4, 'b--', 'Soglia (4*std)');
+title('Analisi errori healthy e threshold alternativi');
+xlabel('Errore di ricostruzione');
+ylabel('Frequenza');
+legend('Errori healthy','Soglia 3*std','Soglia 2*std','Soglia 4*std');
+
+% Stampa statistiche chiave
+fprintf('Media errore healthy: %.4f\n', mean(reconstructionError_healthy));
+fprintf('Std errore healthy: %.4f\n', std(reconstructionError_healthy));
+fprintf('Soglia (media + 3*std): %.4f\n', soglia);
+fprintf('Soglia alternativa (media + 2*std): %.4f\n', soglia2);
+fprintf('Soglia alternativa (media + 4*std): %.4f\n', soglia4);
 
 fprintf("\n==== Fine complete_pipeline_with_analysis.m ====\n");
 
