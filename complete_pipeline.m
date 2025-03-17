@@ -15,6 +15,9 @@
 %   STEP 6: Creazione file CSV di submission per i dati unhealthy.
 %   STEP 7: Caricamento dati TEST (dalla cartella di test),
 %           segmentazione, mapping e creazione file CSV di submission_test.
+%   STEP 8: Caricamento dati VALIDATION, segmentazione, mapping e creazione file CSV di submission_validation.
+%   STEP 9: Tuning & Analisi: Visualizzazione di threshold alternativi e statistiche.
+%   STEP 10: Creazione file per il Diagnostic Feature Designer.
 %
 % NOTA: I parametri (soglia, healthy_std, sigma) sono esemplificativi
 %       colNames = {'sample_id','prob_0','prob_1','prob_2','prob_3','prob_4','prob_5','prob_6','prob_7','prob_8','prob_9','prob_10','confidence'};
@@ -315,6 +318,19 @@ fprintf('Std errore healthy: %.4f\n', std(reconstructionError_healthy));
 fprintf('Soglia (media + 3*std): %.4f\n', soglia);
 fprintf('Soglia alternativa (media + 2*std): %.4f\n', soglia2);
 fprintf('Soglia alternativa (media + 4*std): %.4f\n', soglia4);
+
+%% =============================================================================
+% STEP 10: CREAZIONE FILE PER IL DIAGNOSTIC FEATURE DESIGNER
+%% =============================================================================
+fprintf("\n[STEP 10] Creazione file per il Diagnostic Feature Designer...\n");
+% Combina le tabelle delle feature dai dati healthy e unhealthy.
+% (Se preferisci usare solo i dati healthy, sostituisci 'data_feature_Table_unhealthy'
+% con una tabella vuota o ometti questa parte.)
+diagnosticFeatureTable = [data_feature_Table_healthy; data_feature_Table_unhealthy];
+
+% Salva la tabella in un file MAT che può essere caricato in Diagnostic Feature Designer
+save('diagnosticFeatureTable.mat', 'diagnosticFeatureTable', '-v7.3');
+fprintf("File diagnosticFeatureData.mat creato per il Diagnostic Feature Designer.\n");
 
 fprintf("\n==== Fine complete_pipeline_with_analysis.m ====\n");
 
