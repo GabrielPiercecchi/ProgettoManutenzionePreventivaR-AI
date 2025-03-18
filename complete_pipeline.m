@@ -41,15 +41,18 @@ fprintf('Numero di file healthy caricati: %d\n', height(dataTable_healthy));
 fprintf("Feature extraction (healthy) completata.\n");
 
 % Parametri di segmentazione
-Fs = 20480;         % Sample rate     
-secPerSegment = 1;       % Lunghezza del segmento in secondi
-samplesPerSeg = Fs * secPerSegment; % Lunghezza del segmento in campioni
-overlap = 0;      % Sovrapposizione tra segmenti       
-axisName = 'acc_x';      
+Fs = 20480;                         % Sample rate   
+secPerSegment = 1;                  % Lunghezza del segmento in secondi
+samplesPerSeg = Fs * secPerSegment;   % Lunghezza del segmento in campioni
+overlap = 0;                        % Sovrapposizione tra segmenti       
+axisNames = {'acc_x','acc_y','acc_z', 'tachometer'};  % Utilizza tutti e tre gli assi più il tachimetro
 
 fprintf("Segmentazione dei dati healthy...\n");
-[XTrain, ~] = createSegmentsFromTable(dataTable_healthy, axisName, samplesPerSeg, overlap);
-XTrain = reshape(XTrain, [samplesPerSeg, 1, 1, size(XTrain,3)]);
+[XTrain, ~] = createSegmentsFromTableMulti(dataTable_healthy, axisNames, samplesPerSeg, overlap);
+% La funzione createSegmentsFromTableMulti dovrebbe restituire XTrain con dimensioni:
+% [samplesPerSeg x 1 x numChannels x nSegments]
+numChannels = length(axisNames);
+XTrain = reshape(XTrain, [samplesPerSeg, numChannels, 1, size(XTrain,4)]);
 fprintf('Segmenti healthy totali: %d\n', size(XTrain,4));
 
 %% =============================================================================
@@ -57,7 +60,7 @@ fprintf('Segmenti healthy totali: %d\n', size(XTrain,4));
 %% =============================================================================
 fprintf("\n[STEP 2] Addestramento autoencoder CNN sui dati healthy...\n");
 layers = [
-    imageInputLayer([samplesPerSeg 1 1],"Name","input","Normalization","none")
+    imageInputLayer([samplesPerSeg, numChannels, 1],"Name","input","Normalization","none")
     % Encoder
     convolution2dLayer([3 1],16,"Padding","same","Name","conv_1")
     reluLayer("Name","relu_1")
@@ -75,7 +78,7 @@ layers = [
     ];
 
 miniBatchSize = 16;
-maxEpochs = 5;  % Modifica a 30 o più per un training completo
+maxEpochs = 10;  % Esempio: aumenta il numero di epoche per un addestramento più lungo
 options = trainingOptions("adam", ...
     "MaxEpochs", maxEpochs, ...
     "MiniBatchSize", miniBatchSize, ...
@@ -114,8 +117,9 @@ fprintf('Numero di file unhealthy caricati: %d\n', height(dataTable_unhealthy));
 fprintf("Feature extraction (unhealthy) completata.\n");
 
 fprintf("Segmentazione dei dati unhealthy...\n");
-[XUnhealthy, nSegPerFile_unhealthy] = createSegmentsFromTable(dataTable_unhealthy, axisName, samplesPerSeg, overlap);
-XUnhealthy = reshape(XUnhealthy, [samplesPerSeg, 1, 1, size(XUnhealthy,3)]);
+[XUnhealthy, nSegPerFile_unhealthy] = createSegmentsFromTableMulti(dataTable_unhealthy, axisNames, samplesPerSeg, overlap);
+numChannels = length(axisNames);
+XUnhealthy = reshape(XUnhealthy, [samplesPerSeg, numChannels, 1, size(XUnhealthy,4)]);
 fprintf('Segmenti unhealthy totali: %d\n', size(XUnhealthy,4));
 
 %% =============================================================================
@@ -211,8 +215,9 @@ dataTable_test = load_data_by_level(main_path_test);
 fprintf('Numero di file test caricati: %d\n', height(dataTable_test));
 
 fprintf("Segmentazione dei dati test...\n");
-[XTest, nSegPerFile_test] = createSegmentsFromTable(dataTable_test, axisName, samplesPerSeg, overlap);
-XTest = reshape(XTest, [samplesPerSeg, 1, 1, size(XTest,3)]);
+[XTest, nSegPerFile_test] = createSegmentsFromTableMulti(dataTable_test, axisNames, samplesPerSeg, overlap);
+% Imposta XTest con dimensioni [segLength x numChannels x 1 x nSegments]
+XTest = reshape(XTest, [samplesPerSeg, numChannels, 1, size(XTest,4)]);
 fprintf('Segmenti test totali: %d\n', size(XTest,4));
 
 fprintf("\n[STEP 7] Predizione e mapping sui dati test...\n");
@@ -258,8 +263,9 @@ dataTable_val = load_data_by_level(main_path_val);
 fprintf('Numero di file validation caricati: %d\n', height(dataTable_val));
 
 fprintf("Segmentazione dei dati validation...\n");
-[XVal, nSegPerFile_val] = createSegmentsFromTable(dataTable_val, axisName, samplesPerSeg, overlap);
-XVal = reshape(XVal, [samplesPerSeg, 1, 1, size(XVal,3)]);
+[XVal, nSegPerFile_val] = createSegmentsFromTableMulti(dataTable_val, axisNames, samplesPerSeg, overlap);
+numChannels = length(axisNames);
+XVal = reshape(XVal, [samplesPerSeg, numChannels, 1, size(XVal,4)]);
 fprintf('Segmenti validation totali: %d\n', size(XVal,4));
 
 fprintf("\n[STEP 8] Elaborazione dati validation e creazione file CSV...\n");
@@ -334,6 +340,75 @@ fprintf("\n==== Fine complete_pipeline_with_analysis.m ====\n");
 
 %% ======================== FUNZIONI LOCALI ========================
 
+function [X, nSegmentsPerFile] = createSegmentsFromTableMulti(dataTable, axisNames, segLength, overlap)
+    % createSegmentsFromTableMulti - Estrae segmenti da più canali per ciascun file
+    % e garantisce che ogni file abbia lo stesso numero di segmenti per tutti i canali.
+    %
+    % INPUT:
+    %   dataTable  - Tabella contenente i dati, con campi per ciascun canale (es. acc_x, acc_y, acc_z)
+    %   axisNames  - Cell array con i nomi degli assi da utilizzare (es. {'acc_x','acc_y','acc_z'})
+    %   segLength  - Lunghezza del segmento in campioni
+    %   overlap    - Numero di campioni di sovrapposizione tra segmenti
+    %
+    % OUTPUT:
+    %   X               - Array 4D di segmenti con dimensioni:
+    %                     [segLength x numChannels x 1 x totalSegments]
+    %   nSegmentsPerFile- Vettore con il numero di segmenti estratti per ciascun file
+    
+    nFiles = height(dataTable);
+    XCell = cell(nFiles, 1);
+    nSegmentsPerFile = zeros(nFiles, 1);
+    fprintf("  [createSegmentsFromTableMulti] Inizio estrazione segmenti...\n");
+
+    for i = 1:nFiles
+        nChannels = length(axisNames);
+        segmentsForFile = cell(nChannels, 1);
+        nSegs = zeros(nChannels, 1);
+        
+        % Estrai i segmenti per ciascun canale
+        for j = 1:nChannels
+            tt = dataTable.(axisNames{j}){i};
+            if isempty(tt)
+                segmentsForFile{j} = [];
+                nSegs(j) = 0;
+            else
+                x = tt.Variables;
+                segs = segmentSignal(x, segLength, overlap);  % [segLength x nSeg]
+                segmentsForFile{j} = segs;
+                nSegs(j) = size(segs, 2);
+            end
+        end
+        
+        % Trova il numero minimo di segmenti tra i canali per il file corrente
+        minSeg = min(nSegs);
+        if minSeg == 0
+            % Se per almeno un canale non ci sono segmenti, escludi il file
+            XCell{i} = [];
+            nSegmentsPerFile(i) = 0;
+        else
+            % Prealloca per i segmenti: [segLength x minSeg x nChannels]
+            fileSegments = zeros(segLength, minSeg, nChannels);
+            for j = 1:nChannels
+                fileSegments(:, :, j) = segmentsForFile{j}(:, 1:minSeg);
+            end
+            % Risistema le dimensioni in modo da ottenere [segLength x numChannels x 1 x minSeg]
+            fileSegments = permute(fileSegments, [1 3 2]);
+            fileSegments = reshape(fileSegments, [segLength, nChannels, 1, minSeg]);
+            XCell{i} = fileSegments;
+            nSegmentsPerFile(i) = minSeg;
+        end
+    end
+    
+    % Rimuovi eventuali celle vuote e concatena lungo la quarta dimensione
+    XValid = XCell(~cellfun('isempty', XCell));
+    if isempty(XValid)
+        X = [];
+    else
+        X = cat(4, XValid{:});
+    end
+    fprintf("  [createSegmentsFromTableMulti] Segmenti totali estratti: %d\n", size(X,4));
+end
+
 function level = mapErrorToSeverity(error, soglia, healthy_std)
     % Mappa l'errore di ricostruzione in un livello di degradazione da 0 a 10.
     if error <= soglia
@@ -400,26 +475,6 @@ function dataTable = load_data_by_level(main_path, varargin)
     fprintf("  [load_data_by_level] File filtrati: %d\n", numel(data_cell));
     Fs = 20480; % Sample rate
     dataTable = datatable(data_cell, Fs);
-end
-
-function [X, nSegmentsPerFile] = createSegmentsFromTable(dataTable, axisName, segLength, overlap)
-    nFiles = height(dataTable);
-    XCell = cell(nFiles,1);
-    nSegmentsPerFile = zeros(nFiles,1);
-    fprintf("  [createSegmentsFromTable] Inizio estrazione segmenti...\n");
-    for i = 1:nFiles
-        tt = dataTable.(axisName){i};
-        if isempty(tt)
-            continue;
-        end
-        x = tt.Variables;
-        segments = segmentSignal(x, segLength, overlap);
-        segments3D = reshape(segments, segLength, 1, []);
-        XCell{i} = segments3D;
-        nSegmentsPerFile(i) = size(segments3D,3);
-    end
-    X = cat(3, XCell{:});
-    fprintf("  [createSegmentsFromTable] Segmenti totali estratti: %d\n", size(X,3));
 end
 
 function segments = segmentSignal(x, segLength, overlap)
