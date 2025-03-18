@@ -22,8 +22,6 @@
 % NOTA: I parametri (soglia, healthy_std, sigma) sono esemplificativi
 %       colNames = {'sample_id','prob_0','prob_1','prob_2','prob_3','prob_4','prob_5','prob_6','prob_7','prob_8','prob_9','prob_10','confidence'};
 %
-% Assicurati che le funzioni ausiliarie (datatable, segmentSignal, ecc.) siano
-% definite come funzioni locali in questo file o presenti nel path.
 
 clear; clc; close all;
 fprintf("==== Inizio complete_autoencoder_pipeline.m ====\n");
