@@ -3,6 +3,7 @@
 % con autoencoder CNN unsupervised ed estrazione dummy delle feature.
 %
 % Il flusso:
+%   STEP 0: Nel file txt_sample_transformer.m vengono limitiati i campionamenti a 3 secondi per tutte le velocità.
 %   STEP 1: Caricamento dati HEALTHY (Pitting_degradation_level_0),
 %           estrazione delle feature e segmentazione.
 %   STEP 2: Addestramento dell'autoencoder CNN sui dati healthy.
@@ -42,7 +43,7 @@ fprintf("Feature extraction (healthy) completata.\n");
 
 % Parametri di segmentazione
 Fs = 20480;                         % Sample rate   
-secPerSegment = 1;                  % Lunghezza del segmento in secondi
+secPerSegment = 3;                  % Lunghezza del segmento in secondi
 samplesPerSeg = Fs * secPerSegment;   % Lunghezza del segmento in campioni
 overlap = 0;                        % Sovrapposizione tra segmenti       
 axisNames = {'acc_x','acc_y','acc_z', 'tachometer'};  % Utilizza tutti e tre gli assi più il tachimetro
@@ -82,7 +83,7 @@ maxEpochs = 10;  % Esempio: aumenta il numero di epoche per un addestramento pi�
 options = trainingOptions("adam", ...
     "MaxEpochs", maxEpochs, ...
     "MiniBatchSize", miniBatchSize, ...
-    "InitialLearnRate",1e-3, ...
+    "InitialLearnRate",1e-2, ...
     "Plots","training-progress", ...
     "Verbose",true);
 
