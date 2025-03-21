@@ -1,15 +1,17 @@
-%% FaultSeverityEstimation_ImageInput_withAnomalyDetection.m
-% Script per fault severity estimation trattando ogni segmento come "immagine"
-% con dimensioni [20000 x 3 x 1]. I file txt contengono 4 colonne, si usano le prime 3 (X, Y, Z).
+%% FaultSeverityEstimation_with_V_N.m
+% Script per fault severity estimation che utilizza i segnali (X, Y, Z)
+% insieme alle condizioni operative (V: velocità, N: coppia).
+% I file txt contengono 4 colonne; si usano le prime 3 (X, Y, Z) e si estraggono V e N dal nome del file.
+% Le informazioni V e N vengono aggiunte come canali costanti per ciascun segmento.
 % Include anche un modulo di anomaly detection per la classe "2".
 
 %% Parametri e configurazione
 FS = 20480;              % frequenza di campionamento (20.48 kHz)
 SEGMENT = 1;
 SEGMENT_LENGTH = FS * SEGMENT;   % campioni per segmento (1 secondo)
-NUM_CLASSES = 7;          % 7 classi (le classi originali 0,1,2,3,4,6,8 vengono rietichettate da 0 a 6)
+NUM_CLASSES = 7;          % Le classi originali (0,1,2,3,4,6,8) vengono rietichettate da 0 a 6
 BATCH_SIZE = 32;
-EPOCHS = 15;
+EPOCHS = 15;              % Puoi aumentare le epoche per un training più approfondito
 
 % Percorsi (modifica i path in base alla tua struttura)
 TRAIN_ROOT = 'B - PHM America 2023 - Dataset/Data_Challenge_PHM2023_training_data';
@@ -35,6 +37,16 @@ function [X, y] = loadTrainingData(rootFolder, segmentLength, folderLabelMap)
         fprintf('Carico %d file da %s (label = %d)\n', length(fileList), folderName, label);
         for i = 1:length(fileList)
             filePath = fullfile(folderPath, fileList(i).name);
+            % Estrazione di V e N dal nome del file
+            tokens = regexp(fileList(i).name, 'V(\d+)[\-_]?(\d+)N', 'tokens');
+            if ~isempty(tokens)
+                V_val = str2double(tokens{1}{1});
+                N_val = str2double(tokens{1}{2});
+            else
+                warning('Non è possibile estrarre V e N da %s. Imposto valori NaN.', fileList(i).name);
+                V_val = NaN; N_val = NaN;
+            end
+            
             try
                 % Carica il file e prendi le prime 3 colonne (X, Y, Z)
                 data = load(filePath);
@@ -47,18 +59,23 @@ function [X, y] = loadTrainingData(rootFolder, segmentLength, folderLabelMap)
                 warning('Errore nella lettura di %s: %s', filePath, ME.message);
                 continue;
             end
+            
             nSamples = size(data,1);
             nSegments = floor(nSamples/segmentLength);
             for seg = 1:nSegments
                 segment = data((seg-1)*segmentLength+1 : seg*segmentLength, :);
                 if size(segment,1) == segmentLength
-                    X_all = cat(3, X_all, segment); %#ok<AGROW>
+                    % Crea due colonne costanti per V e N, ripetute per ogni timestep
+                    extraChannels = repmat([V_val, N_val], segmentLength, 1);
+                    % Concatena i dati (X, Y, Z) con le extra features (V, N)
+                    segmentExtended = [segment, extraChannels]; % [segmentLength x 5]
+                    X_all = cat(3, X_all, segmentExtended); %#ok<AGROW>
                     y_all = [y_all; label]; %#ok<AGROW>
                 end
             end
         end
     end
-    % X_all ha dimensioni [segmentLength x 3 x numSegments]
+    % X_all ha dimensioni [segmentLength x 5 x numSegments]
     X = X_all;
     y = y_all;
 end
@@ -71,6 +88,16 @@ function [X, fileInfo] = loadTestData(rootFolder, segmentLength)
     fprintf('Carico %d file di test\n', length(fileList));
     for i = 1:length(fileList)
         filePath = fullfile(rootFolder, fileList(i).name);
+        % Estrazione di V e N dal nome del file
+        tokens = regexp(fileList(i).name, 'V(\d+)[\-_]?(\d+)N', 'tokens');
+        if ~isempty(tokens)
+            V_val = str2double(tokens{1}{1});
+            N_val = str2double(tokens{1}{2});
+        else
+            warning('Non è possibile estrarre V e N da %s. Imposto valori NaN.', fileList(i).name);
+            V_val = NaN; N_val = NaN;
+        end
+        
         try
             data = load(filePath);
             if size(data,2) >= 3
@@ -82,22 +109,24 @@ function [X, fileInfo] = loadTestData(rootFolder, segmentLength)
             warning('Errore nella lettura di %s: %s', filePath, ME.message);
             continue;
         end
+        
         nSamples = size(data,1);
         nSegments = floor(nSamples/segmentLength);
         for seg = 1:nSegments
             segment = data((seg-1)*segmentLength+1 : seg*segmentLength, :);
             if size(segment,1) == segmentLength
-                X_all = cat(3, X_all, segment); %#ok<AGROW>
+                extraChannels = repmat([V_val, N_val], segmentLength, 1);
+                segmentExtended = [segment, extraChannels];  % [segmentLength x 5]
+                X_all = cat(3, X_all, segmentExtended); %#ok<AGROW>
                 fileInfo{end+1} = fileList(i).name; %#ok<AGROW>
             end
         end
     end
-    X = X_all; % [segmentLength x 3 x numSegments]
+    X = X_all; % [segmentLength x 5 x numSegments]
 end
 
 %% Caricamento dati
-fprintf('--- Inizio complete_cnn_isolation_forest.m ---\n');
-fprintf('')
+fprintf('--- Inizio FaultSeverityEstimation_with_V_N.m ---\n');
 fprintf('--- Caricamento dati di training ---\n');
 [XTrain, yTrain] = loadTrainingData(TRAIN_ROOT, SEGMENT_LENGTH, folderLabelMap);
 fprintf('Dati training: %d segmenti di dimensione [%d x %d]\n', size(XTrain,3), size(XTrain,1), size(XTrain,2));
@@ -107,7 +136,7 @@ fprintf('--- Caricamento dati di test ---\n');
 fprintf('Dati test: %d segmenti di dimensione [%d x %d]\n', size(XTest,3), size(XTest,1), size(XTest,2));
 
 %% Normalizzazione
-% Calcola media e std per ogni canale sui dati di training
+% Calcola media e std per ogni canale sui dati di training (5 canali: X, Y, Z, V, N)
 numSegTrain = size(XTrain,3);
 meanChannels = zeros(1, size(XTrain,2));
 stdChannels  = zeros(1, size(XTrain,2));
@@ -123,16 +152,15 @@ for ch = 1:size(XTrain,2)
 end
 
 %% Conversione dei dati in formato 4D
-% I dati di training, che attualmente hanno dimensioni [20000 x 3 x N], verranno convertiti
-% in un array 4D di dimensioni [20000, 3, 1, N]
+% I dati di training, attualmente [20000 x 5 x N], vengono convertiti in un array 4D [20000, 5, 1, N]
 numTrain = size(XTrain,3);
-XTrain4D = zeros(SEGMENT_LENGTH, 3, 1, numTrain);
+XTrain4D = zeros(SEGMENT_LENGTH, 5, 1, numTrain);
 for i = 1:numTrain
     XTrain4D(:,:,:,i) = XTrain(:,:,i);
 end
 
 numTest = size(XTest,3);
-XTest4D = zeros(SEGMENT_LENGTH, 3, 1, numTest);
+XTest4D = zeros(SEGMENT_LENGTH, 5, 1, numTest);
 for i = 1:numTest
     XTest4D(:,:,:,i) = XTest(:,:,i);
 end
@@ -151,10 +179,11 @@ XVal = XTrain4D(:,:,:,idxVal);
 YVal = yTrainCat(idxVal);
 
 %% Definizione del modello CNN con imageInputLayer
-inputSize = [SEGMENT_LENGTH, 3, 1];
+% Adesso l'input ha dimensione [20000, 5, 1]
+inputSize = [SEGMENT_LENGTH, 5, 1];
 layers = [ ...
     imageInputLayer(inputSize, 'Name','input','Normalization','none')
-    convolution2dLayer([64,3], 16, 'Padding','same','Name','conv1')
+    convolution2dLayer([64,5], 16, 'Padding','same','Name','conv1')
     reluLayer('Name','relu1')
     maxPooling2dLayer([4,1],'Stride',[4,1],'Name','pool1')
     convolution2dLayer([32,1], 32, 'Padding','same','Name','conv2')
@@ -183,12 +212,6 @@ options = trainingOptions('rmsprop', ...
 %% Addestramento del modello
 net = trainNetwork(XTrainFinal, YTrainFinal, layers, options);
 
-%% Visualizzazione interattiva delle feature con diagnosticFeatureDesigner
-% Estrai le feature dai dati di training dal layer 'relu_fc1'
-featuresTrain = activations(net, XTrainFinal, 'relu_fc1', 'OutputAs', 'rows');
-% Avvia diagnosticFeatureDesigner per esplorare le feature insieme alle etichette
-diagnosticFeatureDesigner(featuresTrain, cellstr(YTrainFinal));
-
 %% Valutazione sul validation set
 YPredVal = classify(net, XVal);
 accuracyVal = mean(YPredVal == YVal);
@@ -212,68 +235,32 @@ for i = 1:numTest
         i, testInfo{i}, string(YPredTest(i)), confidences(i));
 end
 
-%% MODULO DI ANOMALY DETECTION ESTESO PER CLASSI BASE
-% Le classi presenti nel training sono: "0", "1", "2", "3", "4", "6", "8".
-% I livelli mancanti (non visti in training) sono: "5", "7", "9".
-% Quindi, se un segmento predetto come "4" risulta anomalo, verrà riassegnato a "5";
-% se predetto come "6" e anomalo, a "7"; se predetto come "8" e anomalo, a "9".
-
-% Definiamo le classi base e la mappa per le classi mancanti:
-baseClasses = ["4", "6", "8"];
-missingMap = containers.Map({"4", "6", "8"}, {"5", "7", "9"});
-
-% Estraiamo le feature dai dati di training dal layer 'relu_fc1'
-featuresTrain = activations(net, XTrainFinal, 'relu_fc1', 'OutputAs', 'rows');
-
-% Addestriamo un one-class SVM per ciascuna classe base
-svmModels = containers.Map;
-for j = 1:length(baseClasses)
-    base = baseClasses(j);
-    idx = (string(YTrainFinal) == base);
-    if sum(idx) > 0
-        featuresBase = featuresTrain(idx, :);
-        svmModel = fitcsvm(featuresBase, ones(size(featuresBase,1),1), ...
-            'KernelFunction','gaussian','Standardize',true, ...
-            'OutlierFraction',0.05,'ClassNames',1);
-        svmModels(base) = svmModel;
-        fprintf('Modello SVM addestrato per la classe base %s.\n', base);
-    else
-        fprintf('Nessun campione per la classe base %s.\n', base);
-    end
-end
-
-% Estraiamo le feature per i dati di test dal layer 'relu_fc1'
+%% MODULO DI ANOMALY DETECTION
+% Esempio: addestriamo un one-class SVM per i segmenti appartenenti alla classe "2".
+featuresTrain = activations(net, XTrainFinal, 'relu_fc1', 'OutputAs', 'rows');  % [N_train x 128]
+idxClass2 = (YTrainFinal == '2');
+featuresClass2 = featuresTrain(idxClass2, :);
+svmModel = fitcsvm(featuresClass2, ones(size(featuresClass2,1),1), ...
+    'KernelFunction','gaussian','Standardize',true, ...
+    'OutlierFraction',0.05,'ClassNames',1);
 featuresTest = activations(net, XTest4D, 'relu_fc1', 'OutputAs', 'rows');
-
-% Soglia per il punteggio SVM (da regolare in base ai dati)
-threshold = -0.1;
-
-% Per ogni segmento del test, se la predizione è una classe base,
-% controlla lo score dell'SVM e, se inferiore alla soglia, riassegna alla classe mancante.
 for i = 1:numTest
-    predLabel = string(YPredTest(i));
-    if ismember(predLabel, baseClasses)
-        svmModel = svmModels(predLabel);
+    if strcmp(string(YPredTest(i)), '2')
         [~, score] = predict(svmModel, featuresTest(i,:));
-        if score < threshold
-            newLabel = missingMap(predLabel);
-            fprintf('Segmento %d (file: %s): Rilevata anomalia in classe %s (score=%.4f), riassegnata a %s.\n', ...
-                i, testInfo{i}, predLabel, score, newLabel);
-            YPredTest(i) = categorical(newLabel);
+        if score < -0.1
+            fprintf('Segmento %d (file: %s): Rilevata anomalia in classe 2, suggerita riassegnazione a livello superiore.\n', i, testInfo{i});
+            % Esempio: YPredTest(i) = categorical(3);
         end
     end
 end
 
 %% Esportazione dei risultati del test in submission.csv
-% Creiamo una tabella che contiene il nome del file (o ID del segmento) e la predizione
 submissionTable = table(testInfo', string(YPredTest), confidences, ...
     'VariableNames', {'File', 'Prediction', 'Confidence'});
 writetable(submissionTable, 'submission.csv');
 fprintf('File submission.csv generato con %d righe.\n', height(submissionTable));
 
 %% (Opzionale) Esportazione dei risultati della validazione in validation_submission.csv
-% Se vuoi avere una submission di validazione, usa i dati del validation set.
-% Dato che per il validation set non hai "filename", puoi usare un ID numerico.
 YPredVal = classify(net, XVal);
 valIDs = (1:numel(YPredVal))';
 validationTable = table(valIDs, string(YPredVal), 'VariableNames', {'Id', 'Prediction'});
