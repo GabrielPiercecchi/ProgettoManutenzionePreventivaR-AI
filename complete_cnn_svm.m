@@ -104,7 +104,7 @@ fprintf('Dati training: %d segmenti di dimensione [%d x %d]\n', size(XTrain,3), 
 
 fprintf('--- Caricamento dati di test ---\n');
 [XTest, testInfo] = loadTestData(TEST_ROOT, SEGMENT_LENGTH);
-fprintf('Dati test: %d segmenti di dimensione [%d x %d]\n', size(XTest,3), size(XTest,1), size(XTest,2));
+fprintf('Dati test (circa 3 per file): %d segmenti di dimensione [%d x %d]\n', size(XTest,3), size(XTest,1), size(XTest,2));
 
 %% Normalizzazione
 % Calcola media e std per ogni canale sui dati di training
@@ -266,16 +266,133 @@ end
 
 %% Esportazione dei risultati del test in submission.csv
 % Creiamo una tabella che contiene il nome del file (o ID del segmento) e la predizione
-submissionTable = table(testInfo', string(YPredTest), confidences, ...
-    'VariableNames', {'File', 'Prediction', 'Confidence'});
-writetable(submissionTable, 'submission.csv');
-fprintf('File submission.csv generato con %d righe.\n', height(submissionTable));
+%submissionTable = table(testInfo', string(YPredTest), confidences, ...
+%    'VariableNames', {'File', 'Prediction', 'Confidence'});
+%writetable(submissionTable, 'submission_cnn_svm.csv');
+%fprintf('File submission_cnn_svm.csv generato con %d righe.\n', height(submissionTable));
 
 %% (Opzionale) Esportazione dei risultati della validazione in validation_submission.csv
 % Se vuoi avere una submission di validazione, usa i dati del validation set.
 % Dato che per il validation set non hai "filename", puoi usare un ID numerico.
-YPredVal = classify(net, XVal);
-valIDs = (1:numel(YPredVal))';
-validationTable = table(valIDs, string(YPredVal), 'VariableNames', {'Id', 'Prediction'});
-writetable(validationTable, 'validation_submission.csv');
-fprintf('File validation_submission.csv generato con %d righe.\n', height(validationTable));
+%YPredVal = classify(net, XVal);
+%valIDs = (1:numel(YPredVal))';
+%validationTable = table(valIDs, string(YPredVal), 'VariableNames', {'Id', 'Prediction'});
+%writetable(validationTable, 'validation_submission_cnn_svm.csv');
+%fprintf('File validation_submission_cnn_svm.csv generato con %d righe.\n', height(validationTable));
+
+%% --- Creazione submission.csv in formato PHM Challenge ---
+
+% Le classi "viste" nel training e il corrispondente indice di colonna (1-based) 
+%  per prob_0 ... prob_10
+% Vi sono 3 samples per file
+class_labels_seen    = [0,1,2,3,4,6,8];  
+class_idx_in_probs   = [1,2,3,4,5,7,9];  % Esempio: label 0 -> colonna 1, label 1->colonna2, ecc
+
+% Le classi mancanti e la mappa tra classe base -> classe mancante
+%  (4->5, 6->7, 8->9)
+missingMap  = containers.Map({'4','6','8'},{'5','7','9'});
+
+numTest     = size(XTest4D,4);
+prob_matrix = zeros(numTest, 11);  % Perché vanno da prob_0 a prob_10
+confidence_binary = zeros(numTest,1); 
+
+for i = 1:numTest
+    % Probabilità 'raw' dal tuo predict
+    rawProbs = YPredProbs(i,:);   % ad es. dimensione [1 x 7]
+    predLabelChar = char(YPredTest(i));  % '0','1','2','3','4','5','6','7','8','9' ...
+    numericPred   = str2double(predLabelChar);
+
+    % Calcolo confidence binaria (soglia a piacere, 0.7 come esempio)
+    if max(rawProbs) > 0.7
+        confidence_binary(i) = 1;
+    else
+        confidence_binary(i) = 0;
+    end
+
+    % CASO A: Classe predetta e' "vistA": 0,1,2,3,4,6,8
+    % ---------------------------------------------------------------------
+    if ~ismember(predLabelChar,{'5','7','9'})
+        % Metto TUTTA la probabilita' = 1 sulla colonna corrispondente
+        % e 0 sulle altre
+        idx_seen = find(class_labels_seen == numericPred); 
+        if isempty(idx_seen)
+            % Caso improbabile: nel training set c'era la label, ma non la trovi...
+            % fallback: metti tutto in prob_0
+            prob_matrix(i,1) = 1; 
+        else
+            col_out = class_idx_in_probs(idx_seen); 
+            prob_matrix(i, col_out) = 1;
+        end
+
+    % CASO B: Classe predetta e' "mancante": 5,7,9
+    % ---------------------------------------------------------------------
+    else
+        % 1) Trovo la "base" da cui e' stata riassegnata
+        %    Esempio: se label=5 => base=4
+        base = '';  % '4','6','8'
+        switch predLabelChar
+            case '5'
+                base = '4';
+            case '7'
+                base = '6';
+            case '9'
+                base = '8';
+        end
+
+        % 2) Trovo l'indice della base nei '7' canali e la corrispondente colonna nel file
+        baseNum  = str2double(base);
+        idx_base = find(class_labels_seen == baseNum);
+        if isempty(idx_base)
+            % fallback, se non trovi la base
+            disp('!!! Non trovo la base. Metto la colonna mancante a 1');
+            missingNum = str2double(predLabelChar);
+            col_missing = class_idx_in_probs( missingNum+1 ); 
+            prob_matrix(i,col_missing) = 1;
+            continue;
+        end
+        
+        % 3) La probabilita' "grezza" (della CNN) corrispondente a base
+        p_base = rawProbs(idx_base);
+
+        % 4) La colonna "mancante" nel file (5->colonna6, 7->colonna8, 9->colonna10)
+        missingNum    = numericPred;    % 5,7,9
+        col_missing   = missingNum + 1; %  5->6, 7->8, 9->10
+        % se preferisci la logica class_idx_in_probs, puoi:
+        %  col_missing = class_idx_in_probs( find([5,7,9]==missingNum ) );
+        
+        % 5) Travaso: settiamo p_missing = p_base
+        %    e poi aggiungiamo le probabilita' delle altre classi cosi' come 
+        %    date dalla rete, tranne la base che va a 0
+        newProbs    = rawProbs;  
+        newProbs(idx_base) = 0;   % Azzeri la base
+        % Imposti la classe mancante con p_base
+        newProbsMtx = zeros(1,11);  % prob_0..prob_10
+        sum_before  = sum(newProbs);
+
+        for c = 1:length(class_labels_seen)
+            c_label = class_labels_seen(c);   % e.g. 0,1,2,3,4,6,8
+            out_col = class_idx_in_probs(c);  % col da 1..11
+            newProbsMtx(out_col) = newProbs(c);
+        end
+
+        % Aggiungo p_base su col_missing
+        newProbsMtx(col_missing) = newProbsMtx(col_missing) + p_base;
+        
+        % (opzionale) Normalizzo se vuoi che la somma <= 1
+        ssum = sum(newProbsMtx);
+        if ssum>1
+            newProbsMtx = newProbsMtx ./ ssum;  % oppure saturi a 1, come preferisci
+        end
+
+        % Copio nel prob_matrix
+        prob_matrix(i,:) = newProbsMtx;
+    end
+end
+
+% A questo punto, prob_matrix(i,:) ha 11 valori [prob_0..prob_10].
+% Infine salviamo tutto su CSV
+submission_final = [(1:numTest)', prob_matrix, confidence_binary];
+submission_headers = ['sample_id', strcat('prob_', string(0:10)), 'confidence'];
+submission_table = array2table(submission_final,'VariableNames',submission_headers);
+writetable(submission_table, 'submission_cnn_svm.csv');
+fprintf('File submission.csv generato con %d righe.\n',height(submission_table));

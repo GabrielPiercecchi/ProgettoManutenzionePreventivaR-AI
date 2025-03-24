@@ -43,7 +43,7 @@ fprintf("Feature extraction (healthy) completata.\n");
 
 % Parametri di segmentazione
 Fs = 20480;                         % Sample rate   
-secPerSegment = 3;                  % Lunghezza del segmento in secondi
+secPerSegment = 1;                  % Lunghezza del segmento in secondi
 samplesPerSeg = Fs * secPerSegment;   % Lunghezza del segmento in campioni
 overlap = 0;                        % Sovrapposizione tra segmenti       
 axisNames = {'acc_x','acc_y','acc_z', 'tachometer'};  % Utilizza tutti e tre gli assi pi√π il tachimetro
@@ -83,7 +83,7 @@ maxEpochs = 10;  % Esempio: aumenta il numero di epoche per un addestramento pi√
 options = trainingOptions("adam", ...
     "MaxEpochs", maxEpochs, ...
     "MiniBatchSize", miniBatchSize, ...
-    "InitialLearnRate",1e-2, ...
+    "InitialLearnRate",1e-3, ...
     "Plots","training-progress", ...
     "Verbose",true);
 
@@ -252,49 +252,49 @@ colNames = {'sample_id','prob_0','prob_1','prob_2','prob_3','prob_4','prob_5','p
 sample_ids_test = (1:nSeg_test)';
 submission_test = [sample_ids_test, probMatrix_test, confVec_test];
 T_sub_test = array2table(submission_test, 'VariableNames', colNames);
-writetable(T_sub_test, 'submission_test.csv');
-fprintf("File submission_test.csv creato.\n");
+writetable(T_sub_test, 'submission_cnn.csv');
+fprintf("File submission_cnn.csv creato.\n");
 
 %% =============================================================================
 % STEP 8: CARICAMENTO DATI VALIDATION ED ELABORAZIONE (CREAZIONE CSV)
 %% =============================================================================
-fprintf("\n[STEP 8] Caricamento dati VALIDATION...\n");
-main_path_val = "B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_validation_data\";
-dataTable_val = load_data_by_level(main_path_val);
-fprintf('Numero di file validation caricati: %d\n', height(dataTable_val));
+%fprintf("\n[STEP 8] Caricamento dati VALIDATION...\n");
+%main_path_val = "B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_validation_data\";
+%dataTable_val = load_data_by_level(main_path_val);
+%fprintf('Numero di file validation caricati: %d\n', height(dataTable_val));
 
-fprintf("Segmentazione dei dati validation...\n");
-[XVal, nSegPerFile_val] = createSegmentsFromTableMulti(dataTable_val, axisNames, samplesPerSeg, overlap);
-numChannels = length(axisNames);
-XVal = reshape(XVal, [samplesPerSeg, numChannels, 1, size(XVal,4)]);
-fprintf('Segmenti validation totali: %d\n', size(XVal,4));
+%fprintf("Segmentazione dei dati validation...\n");
+%[XVal, nSegPerFile_val] = createSegmentsFromTableMulti(dataTable_val, axisNames, samplesPerSeg, overlap);
+%numChannels = length(axisNames);
+%XVal = reshape(XVal, [samplesPerSeg, numChannels, 1, size(XVal,4)]);
+%fprintf('Segmenti validation totali: %d\n', size(XVal,4));
 
-fprintf("\n[STEP 8] Elaborazione dati validation e creazione file CSV...\n");
-XRecon_val = predict(net, XVal);
-reconstructionError_val = mean((XRecon_val - XVal).^2, [1 2]);
-reconstructionError_val = squeeze(reconstructionError_val);
+%fprintf("\n[STEP 8] Elaborazione dati validation e creazione file CSV...\n");
+%XRecon_val = predict(net, XVal);
+%reconstructionError_val = mean((XRecon_val - XVal).^2, [1 2]);
+%reconstructionError_val = squeeze(reconstructionError_val);
 
-nSeg_val = numel(reconstructionError_val);
-predictedLevels_val = zeros(nSeg_val,1);
-probMatrix_val = zeros(nSeg_val, 11);
-confVec_val = zeros(nSeg_val,1);
-for i = 1:nSeg_val
-    err = reconstructionError_val(i);
-    predictedLevels_val(i) = mapErrorToSeverity(err, soglia, healthy_std);
-    probMatrix_val(i,:) = levelToProbability(predictedLevels_val(i));
-    confVec_val(i) = computeConfidence(err, soglia, healthy_std);
-end
+%Seg_val = numel(reconstructionError_val);
+%predictedLevels_val = zeros(nSeg_val,1);
+%probMatrix_val = zeros(nSeg_val, 11);
+%confVec_val = zeros(nSeg_val,1);
+%for i = 1:nSeg_val
+%    err = reconstructionError_val(i);
+%    predictedLevels_val(i) = mapErrorToSeverity(err, soglia, healthy_std);
+%    probMatrix_val(i,:) = levelToProbability(predictedLevels_val(i));
+%    confVec_val(i) = computeConfidence(err, soglia, healthy_std);
+%end
 
-fprintf("Livello medio predetto (validation): %.2f\n", mean(predictedLevels_val));
-fprintf("Percentuale di segmenti validation con alta confidenza: %.2f%%\n", 100*mean(confVec_val));
+%fprintf("Livello medio predetto (validation): %.2f\n", mean(predictedLevels_val));
+%fprintf("Percentuale di segmenti validation con alta confidenza: %.2f%%\n", 100*mean(confVec_val));
 
-sample_ids_val = (1:nSeg_val)';
-submission_val = [sample_ids_val, probMatrix_val, confVec_val];
+%sample_ids_val = (1:nSeg_val)';
+%submission_val = [sample_ids_val, probMatrix_val, confVec_val];
 % Creazione tabella con header per submission_validation
-colNames = {'sample_id','prob_0','prob_1','prob_2','prob_3','prob_4','prob_5','prob_6','prob_7','prob_8','prob_9','prob_10','confidence'};
-T_sub_val = array2table(submission_val, 'VariableNames', colNames);
-writetable(T_sub_val, 'submission_validation.csv');
-fprintf("File submission_validation.csv creato.\n");
+%colNames = {'sample_id','prob_0','prob_1','prob_2','prob_3','prob_4','prob_5','prob_6','prob_7','prob_8','prob_9','prob_10','confidence'};
+%T_sub_val = array2table(submission_val, 'VariableNames', colNames);
+%writetable(T_sub_val, 'submission_validation.csv');
+%fprintf("File submission_validation_cnn.csv creato.\n");
 
 %% =============================================================================
 % STEP 9: Tuning & Analisi: Visualizzazione di threshold alternativi e statistiche
