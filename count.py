@@ -15,3 +15,11 @@ directory = r"B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_test_data"
 txt_file_count = count_txt_files(directory)
 
 print(f"Numero di file .txt nella cartella '{directory}': {txt_file_count}")
+
+# Specifica il percorso della cartella
+directory = r"B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_validation_data"
+
+# Conta i file .txt
+txt_file_count = count_txt_files(directory)
+
+print(f"Numero di file .txt nella cartella '{directory}': {txt_file_count}")

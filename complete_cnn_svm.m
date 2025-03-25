@@ -3,6 +3,22 @@
 % con dimensioni [20000 x 3 x 1]. I file txt contengono 4 colonne, si usano le prime 3 (X, Y, Z).
 % Include anche un modulo di anomaly detection per la classe "2".
 
+%% Preparazione dei dati
+% Per processare i file di training:
+%processFilesForSegmentation('B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_training_data\Pitting_degradation_level_0 (Healthy)\');
+%processFilesForSegmentation('B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_training_data\Pitting_degradation_level_1\');
+%processFilesForSegmentation('B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_training_data\Pitting_degradation_level_2\');
+%processFilesForSegmentation('B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_training_data\Pitting_degradation_level_3\');
+%processFilesForSegmentation('B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_training_data\Pitting_degradation_level_4\');
+%processFilesForSegmentation('B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_training_data\Pitting_degradation_level_6\');
+%processFilesForSegmentation('B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_training_data\Pitting_degradation_level_8\');
+
+% Per processare i file di test:
+%processFilesForSegmentation('B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_test_data\');
+
+% Per processare i file di validation:
+%processFilesForSegmentation('B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_validation_data\');
+
 %% Parametri e configurazione
 FS = 20480;              % frequenza di campionamento (20.48 kHz)
 SEGMENT = 1;
@@ -11,9 +27,10 @@ NUM_CLASSES = 7;          % 7 classi (le classi originali 0,1,2,3,4,6,8 vengono 
 BATCH_SIZE = 32;
 EPOCHS = 15;
 
-% Percorsi (modifica i path in base alla tua struttura)
+% Percorsi
 TRAIN_ROOT = 'B - PHM America 2023 - Dataset/Data_Challenge_PHM2023_training_data';
 TEST_ROOT  = 'B - PHM America 2023 - Dataset/Data_Challenge_PHM2023_test_data';
+VALIDATION_ROOT = 'B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_validation_data';
 
 % Mappatura delle cartelle in etichette numeriche
 folderLabelMap = containers.Map( ...
@@ -52,8 +69,8 @@ function [X, y] = loadTrainingData(rootFolder, segmentLength, folderLabelMap)
             for seg = 1:nSegments
                 segment = data((seg-1)*segmentLength+1 : seg*segmentLength, :);
                 if size(segment,1) == segmentLength
-                    X_all = cat(3, X_all, segment); %#ok<AGROW>
-                    y_all = [y_all; label]; %#ok<AGROW>
+                    X_all = cat(3, X_all, segment);
+                    y_all = [y_all; label];
                 end
             end
         end
@@ -87,8 +104,8 @@ function [X, fileInfo] = loadTestData(rootFolder, segmentLength)
         for seg = 1:nSegments
             segment = data((seg-1)*segmentLength+1 : seg*segmentLength, :);
             if size(segment,1) == segmentLength
-                X_all = cat(3, X_all, segment); %#ok<AGROW>
-                fileInfo{end+1} = fileList(i).name; %#ok<AGROW>
+                X_all = cat(3, X_all, segment);
+                fileInfo{end+1} = fileList(i).name;
             end
         end
     end
@@ -98,13 +115,21 @@ end
 %% Caricamento dati
 fprintf('--- Inizio complete_cnn_svm.m ---\n');
 fprintf('\n');
+
+% ------------------- Elaborazione dati di TRAINING -------------------
 fprintf('--- Caricamento dati di training ---\n');
 [XTrain, yTrain] = loadTrainingData(TRAIN_ROOT, SEGMENT_LENGTH, folderLabelMap);
 fprintf('Dati training: %d segmenti di dimensione [%d x %d]\n', size(XTrain,3), size(XTrain,1), size(XTrain,2));
 
+% ------------------- Elaborazione dati di TEST -------------------
 fprintf('--- Caricamento dati di test ---\n');
 [XTest, testInfo] = loadTestData(TEST_ROOT, SEGMENT_LENGTH);
 fprintf('Dati test (circa 3 per file): %d segmenti di dimensione [%d x %d]\n', size(XTest,3), size(XTest,1), size(XTest,2));
+
+% ------------------- Elaborazione dati di VALIDAZIONE -------------------
+fprintf('--- Caricamento dati di validazione ---\n');
+[XValidation, validationInfo] = loadTestData(VALIDATION_ROOT, SEGMENT_LENGTH);
+fprintf('Dati validazione: %d segmenti di dimensione [%d x %d]\n', size(XValidation,3), size(XValidation,1), size(XValidation,2));
 
 %% Normalizzazione
 % Calcola media e std per ogni canale sui dati di training
@@ -116,26 +141,27 @@ for ch = 1:size(XTrain,2)
     meanChannels(ch) = mean(allData);
     stdChannels(ch) = std(allData);
 end
-% Applica normalizzazione a training e test
+
+% Applica normalizzazione a TRAINING, TEST e VALIDAZIONE
 for ch = 1:size(XTrain,2)
     XTrain(:,ch,:) = (XTrain(:,ch,:) - meanChannels(ch)) / stdChannels(ch);
     XTest(:,ch,:)  = (XTest(:,ch,:)  - meanChannels(ch)) / stdChannels(ch);
+    XValidation(:,ch,:) = (XValidation(:,ch,:) - meanChannels(ch)) / stdChannels(ch);
 end
 
 %% Conversione dei dati in formato 4D
 % I dati di training, che attualmente hanno dimensioni [20000 x 3 x N], verranno convertiti
 % in un array 4D di dimensioni [20000, 3, 1, N]
-numTrain = size(XTrain,3);
-XTrain4D = zeros(SEGMENT_LENGTH, 3, 1, numTrain);
-for i = 1:numTrain
-    XTrain4D(:,:,:,i) = XTrain(:,:,i);
-end
+convert4D = @(X) reshape(X, size(X,1), size(X,2), 1, size(X,3));
 
-numTest = size(XTest,3);
-XTest4D = zeros(SEGMENT_LENGTH, 3, 1, numTest);
-for i = 1:numTest
-    XTest4D(:,:,:,i) = XTest(:,:,i);
-end
+XTrain4D = convert4D(XTrain);
+XTest4D = convert4D(XTest);
+XValidation4D = convert4D(XValidation);
+
+% Definizione del numero di segmenti per ogni set
+numTrain = size(XTrain4D, 4);
+numTest = size(XTest4D, 4);
+numValidation = size(XValidation4D, 4);
 
 %% Conversione delle etichette in variabili categoriche
 yTrainCat = categorical(yTrain);
@@ -212,6 +238,17 @@ for i = 1:numTest
         i, testInfo{i}, string(YPredTest(i)), confidences(i));
 end
 
+%% Predizione sul validation set
+YPredValidation = classify(net, XValidation4D);
+YPredProbsVal = predict(net, XValidation4D);
+confidencesVal = max(YPredProbsVal, [], 2);
+
+fprintf('--- Risultati sul validation set ---\n');
+for i = 1:numValidation
+    fprintf('Segmento %d (file: %s): Predetto livello = %s con confidenza = %.4f\n', ...
+        i, validationInfo{i}, string(YPredValidation(i)), confidencesVal(i));
+end
+
 %% MODULO DI ANOMALY DETECTION ESTESO PER CLASSI BASE
 % Le classi presenti nel training sono: "0", "1", "2", "3", "4", "6", "8".
 % I livelli mancanti (non visti in training) sono: "5", "7", "9".
@@ -242,43 +279,33 @@ for j = 1:length(baseClasses)
     end
 end
 
-% Estraiamo le feature per i dati di test dal layer 'relu_fc1'
-featuresTest = activations(net, XTest4D, 'relu_fc1', 'OutputAs', 'rows');
+threshold = -0.1;  % Soglia per lo score dell'SVM
 
-% Soglia per il punteggio SVM (da regolare in base ai dati)
-threshold = -0.1;
-
-% Per ogni segmento del test, se la predizione è una classe base,
-% controlla lo score dell'SVM e, se inferiore alla soglia, riassegna alla classe mancante.
-for i = 1:numTest
-    predLabel = char(YPredTest(i));  % Converte in char per compatibilità
-    if ismember(predLabel, baseClasses)
-        svmModel = svmModels(predLabel);
-        [~, score] = predict(svmModel, featuresTest(i,:));
-        if score < threshold
-            newLabel = missingMap(predLabel);
-            fprintf('Segmento %d (file: %s): Rilevata anomalia in classe %s (score=%.4f), riassegnata a %s.\n', ...
-                i, testInfo{i}, predLabel, score, newLabel);
-                YPredTest(i) = categorical({newLabel});
+% Funzione di supporto per applicare l'anomaly detection
+function YPredOut = applyAnomalyDetection(YPredIn, features, info, baseClasses, missingMap, svmModels, threshold)
+    YPredOut = YPredIn;  % inizialmente le etichette rimangono invariate
+    for i = 1:length(YPredIn)
+        predLabel = char(YPredIn(i));
+        if ismember(predLabel, baseClasses)
+            svmModel = svmModels(predLabel);
+            [~, score] = predict(svmModel, features(i,:));
+            if score < threshold
+                newLabel = missingMap(predLabel);
+                fprintf('Segmento %d (file: %s): Anomalia in %s (score=%.4f), riassegnata a %s.\n', ...
+                    i, info{i}, predLabel, score, newLabel);
+                YPredOut(i) = categorical({newLabel});
+            end
         end
     end
 end
 
-%% Esportazione dei risultati del test in submission.csv
-% Creiamo una tabella che contiene il nome del file (o ID del segmento) e la predizione
-%submissionTable = table(testInfo', string(YPredTest), confidences, ...
-%    'VariableNames', {'File', 'Prediction', 'Confidence'});
-%writetable(submissionTable, 'submission_cnn_svm.csv');
-%fprintf('File submission_cnn_svm.csv generato con %d righe.\n', height(submissionTable));
+% Applico l'anomaly detection ai dati di TEST
+featuresTest = activations(net, XTest4D, 'relu_fc1', 'OutputAs', 'rows');
+YPredTest = applyAnomalyDetection(YPredTest, featuresTest, testInfo, baseClasses, missingMap, svmModels, threshold);
 
-%% (Opzionale) Esportazione dei risultati della validazione in validation_submission.csv
-% Se vuoi avere una submission di validazione, usa i dati del validation set.
-% Dato che per il validation set non hai "filename", puoi usare un ID numerico.
-%YPredVal = classify(net, XVal);
-%valIDs = (1:numel(YPredVal))';
-%validationTable = table(valIDs, string(YPredVal), 'VariableNames', {'Id', 'Prediction'});
-%writetable(validationTable, 'validation_submission_cnn_svm.csv');
-%fprintf('File validation_submission_cnn_svm.csv generato con %d righe.\n', height(validationTable));
+% Applico l'anomaly detection ai dati di VALIDAZIONE
+featuresValidation = activations(net, XValidation4D, 'relu_fc1', 'OutputAs', 'rows');
+YPredValidation = applyAnomalyDetection(YPredValidation, featuresValidation, validationInfo, baseClasses, missingMap, svmModels, threshold);
 
 %% --- Creazione submission.csv in formato PHM Challenge ---
 
@@ -290,109 +317,210 @@ class_idx_in_probs   = [1,2,3,4,5,7,9];  % Esempio: label 0 -> colonna 1, label 
 
 % Le classi mancanti e la mappa tra classe base -> classe mancante
 %  (4->5, 6->7, 8->9)
-missingMap  = containers.Map({'4','6','8'},{'5','7','9'});
+XTest4D = convert4D(XTest);
 
-numTest     = size(XTest4D,4);
-prob_matrix = zeros(numTest, 11);  % Perché vanno da prob_0 a prob_10
-confidence_binary = zeros(numTest,1); 
+numTest = size(XTest4D,4);
+prob_matrix_test = zeros(numTest, 11);  % colonne per prob_0 ... prob_10
+confidence_binary_test = zeros(numTest,1);
 
 for i = 1:numTest
-    % Probabilità 'raw' dal tuo predict
-    rawProbs = YPredProbs(i,:);   % ad es. dimensione [1 x 7]
-    predLabelChar = char(YPredTest(i));  % '0','1','2','3','4','5','6','7','8','9' ...
-    numericPred   = str2double(predLabelChar);
-
-    % Calcolo confidence binaria (soglia a piacere, 0.7 come esempio)
+    % Estrae le probabilità "raw" per il campione corrente (1 x 7)
+    rawProbs = YPredProbs(i,:);
+    % Converte l'etichetta predetta in carattere (es. '0','1',...)
+    predLabelChar = char(YPredTest(i));
+    % Converte l'etichetta in formato numerico per confronti
+    numericPred = str2double(predLabelChar);
+    
+    % Calcola la "confidence binaria": se la massima probabilità supera 0.7, setta a 1, altrimenti 0
     if max(rawProbs) > 0.7
-        confidence_binary(i) = 1;
+        confidence_binary_test(i) = 1;
     else
-        confidence_binary(i) = 0;
+        confidence_binary_test(i) = 0;
     end
-
-    % CASO A: Classe predetta e' "vistA": 0,1,2,3,4,6,8
-    % ---------------------------------------------------------------------
-    if ~ismember(predLabelChar,{'5','7','9'})
-        % Metto TUTTA la probabilita' = 1 sulla colonna corrispondente
-        % e 0 sulle altre
-        idx_seen = find(class_labels_seen == numericPred); 
+    
+    % Caso A: la classe predetta è "vista" (non riassegnata), cioè non è una delle classi mancanti ('5','7','9')
+    if ~ismember(predLabelChar, {'5','7','9'})
+        % Trova l'indice della classe nella lista delle classi viste
+        idx_seen = find(class_labels_seen == numericPred);
         if isempty(idx_seen)
-            % Caso improbabile: nel training set c'era la label, ma non la trovi...
-            % fallback: metti tutto in prob_0
-            prob_matrix(i,1) = 1; 
+            % Se non trova l'indice (caso improbabile) assegna tutta la probabilità alla prima colonna
+            prob_matrix_test(i,1) = 1;
         else
-            col_out = class_idx_in_probs(idx_seen); 
-            prob_matrix(i, col_out) = 1;
+            % Altrimenti, determina la colonna corrispondente nella submission
+            col_out = class_idx_in_probs(idx_seen);
+            prob_matrix_test(i, col_out) = 1;
         end
-
-    % CASO B: Classe predetta e' "mancante": 5,7,9
-    % ---------------------------------------------------------------------
     else
-        % 1) Trovo la "base" da cui e' stata riassegnata
-        %    Esempio: se label=5 => base=4
-        base = '';  % '4','6','8'
+        % Caso B: la classe predetta è "mancante" (è stata riassegnata tramite anomaly detection)
+        % Determina la classe "base" originale da cui è stata riassegnata:
         switch predLabelChar
-            case '5'
-                base = '4';
-            case '7'
-                base = '6';
-            case '9'
-                base = '8';
+            case '5', base = '4';
+            case '7', base = '6';
+            case '9', base = '8';
         end
-
-        % 2) Trovo l'indice della base nei '7' canali e la corrispondente colonna nel file
-        baseNum  = str2double(base);
+        % Converte la base in formato numerico
+        baseNum = str2double(base);
+        % Trova l'indice della classe base nella lista delle classi viste
         idx_base = find(class_labels_seen == baseNum);
         if isempty(idx_base)
-            % fallback, se non trovi la base
-            disp('!!! Non trovo la base. Metto la colonna mancante a 1');
+            % Se la classe base non viene trovata, utilizza un fallback e assegna tutta la probabilità alla colonna di default
+            disp('!!! Base non trovata, uso fallback');
             missingNum = str2double(predLabelChar);
-            col_missing = class_idx_in_probs( missingNum+1 ); 
-            prob_matrix(i,col_missing) = 1;
+            col_missing = class_idx_in_probs(missingNum+1);
+            prob_matrix_test(i, col_missing) = 1;
             continue;
         end
-        
-        % 3) La probabilita' "grezza" (della CNN) corrispondente a base
+        % Estrae la probabilità "raw" corrispondente alla classe base
         p_base = rawProbs(idx_base);
-
-        % 4) La colonna "mancante" nel file (5->colonna6, 7->colonna8, 9->colonna10)
-        missingNum    = numericPred;    % 5,7,9
-        col_missing   = missingNum + 1; %  5->6, 7->8, 9->10
-        % se preferisci la logica class_idx_in_probs, puoi:
-        %  col_missing = class_idx_in_probs( find([5,7,9]==missingNum ) );
+        % Imposta la colonna della classe mancante nel file (mappata come: 5->6, 7->8, 9->10)
+        missingNum = numericPred;
+        col_missing = missingNum + 1;
         
-        % 5) Travaso: settiamo p_missing = p_base
-        %    e poi aggiungiamo le probabilita' delle altre classi cosi' come 
-        %    date dalla rete, tranne la base che va a 0
-        newProbs    = rawProbs;  
-        newProbs(idx_base) = 0;   % Azzeri la base
-        % Imposti la classe mancante con p_base
-        newProbsMtx = zeros(1,11);  % prob_0..prob_10
-        sum_before  = sum(newProbs);
-
+        % Prepara un nuovo vettore di probabilità partendo da rawProbs
+        newProbs = rawProbs;
+        % Azzera la probabilità della classe base, in modo da trasferirla alla classe mancante
+        newProbs(idx_base) = 0;
+        % Inizializza un vettore di probabilità a zero per tutte le 11 colonne (prob_0 ... prob_10)
+        newProbsMtx = zeros(1,11);
+        % Copia le probabilità delle classi "viste" nelle relative colonne della matrice di output
         for c = 1:length(class_labels_seen)
-            c_label = class_labels_seen(c);   % e.g. 0,1,2,3,4,6,8
-            out_col = class_idx_in_probs(c);  % col da 1..11
+            out_col = class_idx_in_probs(c);
             newProbsMtx(out_col) = newProbs(c);
         end
-
-        % Aggiungo p_base su col_missing
+        % Aggiunge la probabilità della classe base (p_base) nella colonna della classe mancante
         newProbsMtx(col_missing) = newProbsMtx(col_missing) + p_base;
-        
-        % (opzionale) Normalizzo se vuoi che la somma <= 1
+        % Se la somma totale delle probabilità supera 1, normalizza il vettore
         ssum = sum(newProbsMtx);
-        if ssum>1
-            newProbsMtx = newProbsMtx ./ ssum;  % oppure saturi a 1, come preferisci
+        if ssum > 1
+            newProbsMtx = newProbsMtx ./ ssum;
         end
-
-        % Copio nel prob_matrix
-        prob_matrix(i,:) = newProbsMtx;
+        % Salva il vettore di probabilità finale per il campione corrente nella matrice di output
+        prob_matrix_test(i,:) = newProbsMtx;
     end
 end
 
 % A questo punto, prob_matrix(i,:) ha 11 valori [prob_0..prob_10].
 % Infine salviamo tutto su CSV
-submission_final = [(1:numTest)', prob_matrix, confidence_binary];
+submission_final_test = [(1:numTest)', prob_matrix_test, confidence_binary_test];
 submission_headers = ['sample_id', strcat('prob_', string(0:10)), 'confidence'];
-submission_table = array2table(submission_final,'VariableNames',submission_headers);
-writetable(submission_table, 'submission_cnn_svm.csv');
-fprintf('File submission.csv generato con %d righe.\n',height(submission_table));
+submission_table_test = array2table(submission_final_test, 'VariableNames', submission_headers);
+writetable(submission_table_test, 'submission_cnn_svm.csv');
+fprintf('File submission_cnn_svm.csv generato con %d righe.\n', height(submission_table_test));
+
+%% Generazione della submission per la validazione
+numValidation = size(XValidation4D,4);
+prob_matrix_val = zeros(numValidation, 11);
+confidence_binary_val = zeros(numValidation,1);
+
+for i = 1:numValidation
+    rawProbs = YPredProbsVal(i,:);
+    predLabelChar = char(YPredValidation(i));
+    numericPred = str2double(predLabelChar);
+    
+    if max(rawProbs) > 0.7
+        confidence_binary_val(i) = 1;
+    else
+        confidence_binary_val(i) = 0;
+    end
+    
+    if ~ismember(predLabelChar, {'5','7','9'})
+        idx_seen = find(class_labels_seen == numericPred);
+        if isempty(idx_seen)
+            prob_matrix_val(i,1) = 1;
+        else
+            col_out = class_idx_in_probs(idx_seen);
+            prob_matrix_val(i, col_out) = 1;
+        end
+    else
+        switch predLabelChar
+            case '5', base = '4';
+            case '7', base = '6';
+            case '9', base = '8';
+        end
+        baseNum = str2double(base);
+        idx_base = find(class_labels_seen == baseNum);
+        if isempty(idx_base)
+            disp('!!! Base non trovata, uso fallback');
+            missingNum = str2double(predLabelChar);
+            col_missing = class_idx_in_probs(missingNum+1);
+            prob_matrix_val(i, col_missing) = 1;
+            continue;
+        end
+        p_base = rawProbs(idx_base);
+        missingNum = numericPred;
+        col_missing = missingNum + 1;
+        
+        newProbs = rawProbs;
+        newProbs(idx_base) = 0;
+        newProbsMtx = zeros(1,11);
+        for c = 1:length(class_labels_seen)
+            out_col = class_idx_in_probs(c);
+            newProbsMtx(out_col) = newProbs(c);
+        end
+        newProbsMtx(col_missing) = newProbsMtx(col_missing) + p_base;
+        ssum = sum(newProbsMtx);
+        if ssum > 1
+            newProbsMtx = newProbsMtx ./ ssum;
+        end
+        prob_matrix_val(i,:) = newProbsMtx;
+    end
+end
+
+% A questo punto, prob_matrix(i,:) ha 11 valori [prob_0..prob_10].
+% Infine salviamo tutto su CSV
+submission_final_val = [(1:numValidation)', prob_matrix_val, confidence_binary_val];
+submission_table_val = array2table(submission_final_val, 'VariableNames', submission_headers);
+writetable(submission_table_val, 'submission_validation.csv');
+fprintf('File submission_validation.csv generato con %d righe.\n', height(submission_table_val));
+
+%% Statistiche descrittive sulle probabilità massime
+% Leggi i file CSV
+testTable = readtable('submission_cnn_svm.csv');
+valTable  = readtable('submission_validation.csv');
+
+% Estrai le colonne di prob_0..prob_10 (assumendo siano le colonne 2..12)
+probsTest = testTable{:, 2:12};
+probsVal  = valTable{:, 2:12};
+
+% Calcola la massima probabilità (in modo continuo) per ciascuna riga
+maxProbTest = max(probsTest, [], 2);
+maxProbVal  = max(probsVal, [], 2);
+
+% Statistiche descrittive
+meanTest = mean(maxProbTest);
+medianTest = median(maxProbTest);
+stdTest = std(maxProbTest);
+
+meanVal = mean(maxProbVal);
+medianVal = median(maxProbVal);
+stdVal = std(maxProbVal);
+
+fprintf('TEST - Media: %.3f, Mediana: %.3f, Std: %.3f\n', ...
+    meanTest, medianTest, stdTest);
+fprintf('VALIDATION - Media: %.3f, Mediana: %.3f, Std: %.3f\n', ...
+    meanVal, medianVal, stdVal);
+
+% Istogramma e stima di densità per il Test
+figure;
+subplot(1,2,1);
+histogram(maxProbTest, 'Normalization','pdf');
+hold on;
+[xT, fT] = ksdensity(maxProbTest);
+plot(xT, fT, 'LineWidth', 2);
+title('Distribuzione Prob. Max - Test');
+xlabel('Probabilità massima');
+ylabel('Densità di probabilità');
+legend('Istogramma','Stima densità');
+hold off;
+
+% Istogramma e stima di densità per la Validation
+subplot(1,2,2);
+histogram(maxProbVal, 'Normalization','pdf');
+hold on;
+[xV, fV] = ksdensity(maxProbVal);
+plot(xV, fV, 'LineWidth', 2);
+title('Distribuzione Prob. Max - Validation');
+xlabel('Probabilità massima');
+ylabel('Densità di probabilità');
+legend('Istogramma','Stima densità');
+hold off;
