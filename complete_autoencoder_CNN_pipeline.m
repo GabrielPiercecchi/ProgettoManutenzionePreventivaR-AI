@@ -43,7 +43,7 @@ fprintf("Feature extraction (healthy) completata.\n");
 
 % Parametri di segmentazione
 Fs = 20480;                         % Sample rate   
-secPerSegment = 1;                  % Lunghezza del segmento in secondi
+secPerSegment = 3;                  % Lunghezza del segmento in secondi
 samplesPerSeg = Fs * secPerSegment;   % Lunghezza del segmento in campioni
 overlap = 0;                        % Sovrapposizione tra segmenti       
 axisNames = {'acc_x','acc_y','acc_z', 'tachometer'};  % Utilizza tutti e tre gli assi più il tachimetro
