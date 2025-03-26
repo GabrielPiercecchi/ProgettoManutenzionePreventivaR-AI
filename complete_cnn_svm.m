@@ -2,6 +2,7 @@
 % Script per fault severity estimation trattando ogni segmento come "immagine"
 % con dimensioni [20000 x 3 x 1]. I file txt contengono 4 colonne, si usano le prime 3 (X, Y, Z).
 % Include anche un modulo di anomaly detection per la classe "2".
+clear; clc; close all;
 
 %% Preparazione dei dati
 % Per processare i file di training:
@@ -470,13 +471,13 @@ end
 % Infine salviamo tutto su CSV
 submission_final_val = [(1:numValidation)', prob_matrix_val, confidence_binary_val];
 submission_table_val = array2table(submission_final_val, 'VariableNames', submission_headers);
-writetable(submission_table_val, 'submission_validation.csv');
-fprintf('File submission_validation.csv generato con %d righe.\n', height(submission_table_val));
+writetable(submission_table_val, 'submission_validation_cnn_svm.csv');
+fprintf('File submission_validation_cnn_svm.csv generato con %d righe.\n', height(submission_table_val));
 
 %% Statistiche descrittive sulle probabilità massime
 % Leggi i file CSV
 testTable = readtable('submission_cnn_svm.csv');
-valTable  = readtable('submission_validation.csv');
+valTable  = readtable('submission_validation_cnn_svm.csv');
 
 % Estrai le colonne di prob_0..prob_10 (assumendo siano le colonne 2..12)
 probsTest = testTable{:, 2:12};
@@ -500,8 +501,10 @@ fprintf('TEST - Media: %.3f, Mediana: %.3f, Std: %.3f\n', ...
 fprintf('VALIDATION - Media: %.3f, Mediana: %.3f, Std: %.3f\n', ...
     meanVal, medianVal, stdVal);
 
-% Istogramma e stima di densità per il Test
+%% Istogramma e stima di densità per il Test e la Validation in un'unica figura con due subplot
 figure;
+
+% Subplot per il Test
 subplot(1,2,1);
 histogram(maxProbTest, 'Normalization','pdf');
 hold on;
@@ -513,7 +516,7 @@ ylabel('Densità di probabilità');
 legend('Istogramma','Stima densità');
 hold off;
 
-% Istogramma e stima di densità per la Validation
+% Subplot per la Validation
 subplot(1,2,2);
 histogram(maxProbVal, 'Normalization','pdf');
 hold on;
@@ -524,3 +527,70 @@ xlabel('Probabilità massima');
 ylabel('Densità di probabilità');
 legend('Istogramma','Stima densità');
 hold off;
+
+% Salva la figura come PNG
+saveas(gcf, 'distribuzione_probabilita.png');
+
+%% Calcolo delle metriche di classificazione per classe sul validation set
+% Supponiamo che YVal siano le etichette vere e YPredVal le etichette predette.
+[confMat, order] = confusionmat(YVal, YPredVal);
+numClasses = size(confMat, 1);
+
+% Inizializza vettori per le metriche
+precisionVec = zeros(numClasses,1);
+recallVec    = zeros(numClasses,1);
+f1Vec        = zeros(numClasses,1);
+
+% Calcola TP, FP, FN per ciascuna classe e le metriche corrispondenti
+for i = 1:numClasses
+    TP = confMat(i,i);                % True Positives
+    FP = sum(confMat(:,i)) - TP;        % False Positives
+    FN = sum(confMat(i,:)) - TP;        % False Negatives
+    
+    if (TP + FP) == 0
+        precision = 0;
+    else
+        precision = TP / (TP + FP);
+    end
+    
+    if (TP + FN) == 0
+        recall = 0;
+    else
+        recall = TP / (TP + FN);
+    end
+    
+    if (precision + recall) == 0
+        f1 = 0;
+    else
+        f1 = 2 * (precision * recall) / (precision + recall);
+    end
+    
+    precisionVec(i) = precision;
+    recallVec(i)    = recall;
+    f1Vec(i)        = f1;
+end
+
+% Stampa dei risultati
+fprintf('\nMetriche di classificazione sul Validation Set:\n');
+fprintf('Classe\tPrecision\tRecall\tF1-score\n');
+for i = 1:numClasses
+    fprintf('%s\t%.3f\t\t%.3f\t%.3f\n', string(order(i)), precisionVec(i), recallVec(i), f1Vec(i));
+end
+
+%% Creazione grafico a barre per le metriche di classificazione
+% Combina le metriche in una matrice, dove ogni riga corrisponde a una classe
+dataMetrics = [precisionVec, recallVec, f1Vec];
+
+% Crea il grafico a barre raggruppate
+figure;
+bar(dataMetrics);
+set(gca, 'XTickLabel', string(order));  % Imposta le etichette delle classi sull'asse X
+xlabel('Classe');
+ylabel('Valore');
+title('Metriche di Classificazione per Classe');
+legend('Precision', 'Recall', 'F1-score', 'Location', 'northoutside', 'Orientation', 'horizontal');
+grid on;
+
+% Salva il grafico come file PNG
+saveas(gcf, 'classification_metrics.png');
+fprintf('Il grafico delle metriche di classificazione è stato salvato come classification_metrics.png\n');
