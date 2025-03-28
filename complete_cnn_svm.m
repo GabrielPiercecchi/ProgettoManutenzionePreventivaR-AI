@@ -4,8 +4,13 @@
 % Include anche un modulo di anomaly detection per la classe "2".
 clear; clc; close all;
 
+%% Avvio registrazione
+diary('complete_cnn_svm.txt');
+
 %% Preparazione dei dati
 % Per processare i file di training:
+% Sono commentati perchè questa azione è già stata fatta in precedenza.
+
 %processFilesForSegmentation('B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_training_data\Pitting_degradation_level_0 (Healthy)\');
 %processFilesForSegmentation('B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_training_data\Pitting_degradation_level_1\');
 %processFilesForSegmentation('B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_training_data\Pitting_degradation_level_2\');
@@ -594,3 +599,6 @@ grid on;
 % Salva il grafico come file PNG
 saveas(gcf, 'classification_metrics.png');
 fprintf('Il grafico delle metriche di classificazione è stato salvato come classification_metrics.png\n');
+
+%% Fine registrazione
+diary off;
