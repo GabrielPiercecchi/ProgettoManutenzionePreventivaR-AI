@@ -4,8 +4,6 @@ Progetto di MANUTENZIONE PREVENTIVA PER LA ROBOTICA E L'AUTOMAZIONE INTELLIGENTE
 ## Comandi
 
 - diagnosticFeatureDesigner
-- reconstructionError_unhealthy
-- B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_test_data\3_V300_400N.txt --> 123904
 
 ## Output Training
 
