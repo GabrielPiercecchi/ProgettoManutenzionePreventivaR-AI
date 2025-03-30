@@ -5,12 +5,12 @@ Progetto di MANUTENZIONE PREVENTIVA PER LA ROBOTICA E L'AUTOMAZIONE INTELLIGENTE
 
 - [🤖 ProgettoManutenzionePreventivaR-AI](#-progettomanutenzionepreventivar-ai)
   - [📋 Table of Contents](#-table-of-contents)
-  - [🛠️ Comandi](#️-comandi)
+  - [🛠️ Commands](#️-commands)
   - [📊 Output Training](#-output-training)
     - [📉 Output Training complete\_autoencoder\_CNN\_pipeline.m](#-output-training-complete_autoencoder_cnn_pipelinem)
     - [📈 Output Training complete\_cnn\_svm.m](#-output-training-complete_cnn_svmm)
 
-## 🛠️ Comandi
+## 🛠️ Commands
 
 - diagnosticFeatureDesigner
 
