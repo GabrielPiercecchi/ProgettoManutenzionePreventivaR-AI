@@ -1,14 +1,24 @@
-# ProgettoManutenzionePreventivaR-AI
+# 🤖 ProgettoManutenzionePreventivaR-AI
 Progetto di MANUTENZIONE PREVENTIVA PER LA ROBOTICA E L'AUTOMAZIONE INTELLIGENTE
 
-## Comandi
+## 📋 Table of Contents
+
+- [🤖 ProgettoManutenzionePreventivaR-AI](#-progettomanutenzionepreventivar-ai)
+  - [📋 Table of Contents](#-table-of-contents)
+  - [🛠️ Comandi](#️-comandi)
+  - [📊 Output Training](#-output-training)
+    - [📉 Output Training complete\_autoencoder\_CNN\_pipeline.m](#-output-training-complete_autoencoder_cnn_pipelinem)
+    - [📈 Output Training complete\_cnn\_svm.m](#-output-training-complete_cnn_svmm)
+
+## 🛠️ Comandi
 
 - diagnosticFeatureDesigner
 
-## Output Training
+## 📊 Output Training
 
-### Output Training complete_autoencoder_CNN_pipeline.m
-```
+### 📉 Output Training complete_autoencoder_CNN_pipeline.m
+
+```- [ProgettoManutenzionePreventivaR-AI](#progettomanutenzionepreventivar-ai)
 ==== Inizio complete_autoencoder_pipeline.m ====
 
 [STEP 1] Caricamento dati HEALTHY (Pitting_degradation_level_0)...
@@ -102,8 +112,7 @@ File diagnosticFeatureData.mat creato per il Diagnostic Feature Designer.
 >> 
 ```
 
-### Output Training complete_cnn_svm.m
-<img src="terminale_matlab.PNG" alt="Terminale" width="600">
+### 📈 Output Training complete_cnn_svm.m
 
 ```
 --- Inizio complete_cnn_svm.m ---
