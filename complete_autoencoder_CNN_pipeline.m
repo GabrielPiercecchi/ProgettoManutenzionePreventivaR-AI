@@ -27,6 +27,27 @@
 clear; clc; close all;
 fprintf("==== Inizio complete_autoencoder_pipeline.m ====\n");
 
+%% Preparazione dei dati
+% Per processare i file di training:
+% !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+% ATTENZIONE: I file di training devono essere processati una sola volta.
+% COMMENTARLI DOPO LA PRIMA ESECUZIONE DI QUESTO SCRIPT O DI complete_cnn_svm.m
+% !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+processFilesForSegmentation('B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_training_data\Pitting_degradation_level_0 (Healthy)\');
+processFilesForSegmentation('B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_training_data\Pitting_degradation_level_1\');
+processFilesForSegmentation('B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_training_data\Pitting_degradation_level_2\');
+processFilesForSegmentation('B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_training_data\Pitting_degradation_level_3\');
+processFilesForSegmentation('B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_training_data\Pitting_degradation_level_4\');
+processFilesForSegmentation('B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_training_data\Pitting_degradation_level_6\');
+processFilesForSegmentation('B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_training_data\Pitting_degradation_level_8\');
+
+% Per processare i file di test:
+processFilesForSegmentation('B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_test_data\');
+
+% Per processare i file di validation:
+processFilesForSegmentation('B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_validation_data\');
+
 %% =============================================================================
 % STEP 1: CARICAMENTO DEI DATI HEALTHY (LIVELLO 0)
 %% =============================================================================
