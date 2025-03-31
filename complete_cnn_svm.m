@@ -478,18 +478,18 @@ for i = 1:numValidation
 end
 
 % A questo punto, prob_matrix(i,:) ha 11 valori [prob_0..prob_10].
-% Infine salviamo tutto su CSV
+% Infine salva tutto su CSV
 submission_final_val = [(1:numValidation)', prob_matrix_val, confidence_binary_val];
 submission_table_val = array2table(submission_final_val, 'VariableNames', submission_headers);
 writetable(submission_table_val, 'submission_validation_cnn_svm.csv');
 fprintf('File submission_validation_cnn_svm.csv generato con %d righe.\n', height(submission_table_val));
 
 %% Statistiche descrittive sulle probabilità massime
-% Leggi i file CSV
+% Legge i file CSV
 testTable = readtable('submission_cnn_svm.csv');
 valTable  = readtable('submission_validation_cnn_svm.csv');
 
-% Estrai le colonne di prob_0..prob_10 (assumendo siano le colonne 2..12)
+% Estrae le colonne di prob_0..prob_10 (assumendo siano le colonne 2..12)
 probsTest = testTable{:, 2:12};
 probsVal  = valTable{:, 2:12};
 
@@ -542,7 +542,7 @@ hold off;
 saveas(gcf, 'distribuzione_probabilita.png');
 
 %% Calcolo delle metriche di classificazione per classe sul validation set
-% Supponiamo che YVal siano le etichette vere e YPredVal le etichette predette.
+% Supponendo che YVal siano le etichette vere e YPredVal le etichette predette.
 [confMat, order] = confusionmat(YVal, YPredVal);
 numClasses = size(confMat, 1);
 

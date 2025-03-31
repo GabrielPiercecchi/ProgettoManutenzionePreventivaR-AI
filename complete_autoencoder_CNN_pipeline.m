@@ -102,7 +102,7 @@ layers = [
     ];
 
 miniBatchSize = 16;
-maxEpochs = 10;  % Esempio: aumenta il numero di epoche per un addestramento più lungo
+maxEpochs = 10;
 options = trainingOptions("adam", ...
     "MaxEpochs", maxEpochs, ...
     "MiniBatchSize", miniBatchSize, ...
@@ -121,7 +121,7 @@ figure;
 histogram(reconstructionError_healthy, 50);
 title('Errore di ricostruzione (Healthy)');
 
-% Imposta la soglia (esempio: media + 3*std)
+% Imposta la soglia
 soglia = mean(reconstructionError_healthy) + 3*std(reconstructionError_healthy);
 fprintf('Soglia di errore (healthy) = %.4f\n', soglia);
 
@@ -136,7 +136,7 @@ dataTable_unhealthy = load_data_by_level(main_path_train, "Pitting_degradation_l
     "Pitting_degradation_level_8");
 fprintf('Numero di file unhealthy caricati: %d\n', height(dataTable_unhealthy));
 
-% Estrazione delle feature unhealthy (dummy)
+% Estrazione delle feature unhealthy
 [feature_Table_unhealthy, data_feature_Table_unhealthy] = extract_features(dataTable_unhealthy);
 fprintf("Feature extraction (unhealthy) completata.\n");
 

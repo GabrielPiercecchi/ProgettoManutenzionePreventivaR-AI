@@ -5,14 +5,16 @@ Progetto di MANUTENZIONE PREVENTIVA PER LA ROBOTICA E L'AUTOMAZIONE INTELLIGENTE
 
 - [🤖 ProgettoManutenzionePreventivaR-AI](#-progettomanutenzionepreventivar-ai)
   - [📋 Table of Contents](#-table-of-contents)
-  - [🛠️ Commands](#️-commands)
-  - [📊 Output Training](#-output-training)
+  - [📖 Introduzione](#-introduzione)
+  - [� Output Training](#-output-training)
     - [📉 Output Training complete\_autoencoder\_CNN\_pipeline.m](#-output-training-complete_autoencoder_cnn_pipelinem)
     - [📈 Output Training complete\_cnn\_svm.m](#-output-training-complete_cnn_svmm)
 
-## 🛠️ Commands
+## 📖 Introduzione
 
-- diagnosticFeatureDesigner
+Nel seguente progetto sono stati sviluppati 2 modelli: il primo all'interno del file **complete_autoencoder_CNN_pipeline.m** (poi abbandonato per mancanza di efficacia), mentre il secondo (correntemente in uso) all'interno del file **complete_cnn_svm.m**.
+
+Basato sulla [*PHM North America 2023 Conference Data Challenge*](https://data.phmsociety.org/phm2023-conference-data-challenge/).
 
 ## 📊 Output Training
 
