@@ -11,22 +11,24 @@ diary('complete_cnn_svm.txt');
 % Per processare i file di training:
 % !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 % ATTENZIONE: I file di training devono essere processati una sola volta.
+% Ora sono stai commentati per evitare di sovrascrivere i file di test e validation.
+% Se necessario, decommenta le righe sottostanti per processare i file di training.
 % COMMENTARLI DOPO LA PRIMA ESECUZIONE DI QUESTO SCRIPT O DI complete_autoencoder_CNN_pipeline.m
 % !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-processFilesForSegmentation('B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_training_data\Pitting_degradation_level_0 (Healthy)\');
-processFilesForSegmentation('B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_training_data\Pitting_degradation_level_1\');
-processFilesForSegmentation('B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_training_data\Pitting_degradation_level_2\');
-processFilesForSegmentation('B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_training_data\Pitting_degradation_level_3\');
-processFilesForSegmentation('B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_training_data\Pitting_degradation_level_4\');
-processFilesForSegmentation('B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_training_data\Pitting_degradation_level_6\');
-processFilesForSegmentation('B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_training_data\Pitting_degradation_level_8\');
+%processFilesForSegmentation('B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_training_data\Pitting_degradation_level_0 (Healthy)\');
+%processFilesForSegmentation('B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_training_data\Pitting_degradation_level_1\');
+%processFilesForSegmentation('B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_training_data\Pitting_degradation_level_2\');
+%processFilesForSegmentation('B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_training_data\Pitting_degradation_level_3\');
+%processFilesForSegmentation('B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_training_data\Pitting_degradation_level_4\');
+%processFilesForSegmentation('B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_training_data\Pitting_degradation_level_6\');
+%processFilesForSegmentation('B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_training_data\Pitting_degradation_level_8\');
 
 % Per processare i file di test:
-processFilesForSegmentation('B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_test_data\');
+%processFilesForSegmentation('B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_test_data\');
 
 % Per processare i file di validation:
-processFilesForSegmentation('B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_validation_data\');
+%processFilesForSegmentation('B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_validation_data\');
 
 %% Parametri e configurazione
 FS = 20480;              % frequenza di campionamento (20.48 kHz)
