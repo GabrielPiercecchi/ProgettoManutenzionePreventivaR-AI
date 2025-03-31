@@ -605,5 +605,9 @@ grid on;
 saveas(gcf, 'classification_metrics.png');
 fprintf('Il grafico delle metriche di classificazione è stato salvato come classification_metrics.png\n');
 
+%% Analisi colonne files CSV
+analyzeCsvAndSaveImage('submission_cnn_svm.csv', 'submission_cnn_svm.png');
+analyzeCsvAndSaveImage('submission_validation_cnn_svm.csv', 'submission_validation_cnn_svm.png');
+
 %% Fine registrazione
 diary off;
