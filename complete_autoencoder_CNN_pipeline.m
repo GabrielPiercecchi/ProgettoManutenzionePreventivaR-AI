@@ -357,7 +357,7 @@ fprintf("\n[STEP 10] Creazione file per il Diagnostic Feature Designer...\n");
 diagnosticFeatureTable = [data_feature_Table_healthy; data_feature_Table_unhealthy];
 
 % Salva la tabella in un file MAT che può essere caricato in Diagnostic Feature Designer
-save('diagnosticFeatureTable.mat', 'diagnosticFeatureTable', '-v7.3');
+save('diagnosticFeatureTable_cnn.mat', 'diagnosticFeatureTable', '-v7.3');
 fprintf("File diagnosticFeatureData.mat creato per il Diagnostic Feature Designer.\n");
 
 fprintf("\n==== Fine complete_pipeline_with_analysis.m ====\n");
