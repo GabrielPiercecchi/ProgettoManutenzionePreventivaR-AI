@@ -279,9 +279,9 @@ writetable(T_sub_test, 'submission_cnn.csv');
 fprintf("File submission_cnn.csv creato.\n");
 
 %% =============================================================================
-% STEP 8: CARICAMENTO DATI VALIDATION ED ELABORAZIONE (CREAZIONE CSV)
+% STEP 7.1: CARICAMENTO DATI VALIDATION ED ELABORAZIONE (CREAZIONE CSV)
 %% =============================================================================
-fprintf("\n[STEP 8] Caricamento dati VALIDATION...\n");
+fprintf("\n[STEP 7.1] Caricamento dati VALIDATION...\n");
 main_path_val = "B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_validation_data\";
 dataTable_val = load_data_by_level(main_path_val);
 fprintf('Numero di file validation caricati: %d\n', height(dataTable_val));
@@ -325,9 +325,9 @@ writetable(T_sub_val, 'submission_validation_cnn.csv');
 fprintf("File submission_validation_cnn.csv creato.\n");
 
 %% =============================================================================
-% STEP 9: Tuning & Analisi: Visualizzazione di threshold alternativi e statistiche
+% STEP 8: Tuning & Analisi: Visualizzazione di threshold alternativi e statistiche
 %% =============================================================================
-fprintf("\n[STEP 9] Tuning & Analisi: Visualizzazione di threshold alternativi e statistiche...\n");
+fprintf("\n[STEP 8] Tuning & Analisi: Visualizzazione di threshold alternativi e statistiche...\n");
 
 % Calcola soglie alternative basate sui dati healthy
 soglia2 = mean(reconstructionError_healthy) + 2*std(reconstructionError_healthy);
@@ -353,9 +353,9 @@ fprintf('Soglia alternativa (media + 2*std): %.4f\n', soglia2);
 fprintf('Soglia alternativa (media + 4*std): %.4f\n', soglia4);
 
 %% =============================================================================
-% STEP 10: CREAZIONE FILE PER IL DIAGNOSTIC FEATURE DESIGNER
+% STEP 9: CREAZIONE FILE PER IL DIAGNOSTIC FEATURE DESIGNER
 %% =============================================================================
-fprintf("\n[STEP 10] Creazione file per il Diagnostic Feature Designer...\n");
+fprintf("\n[STEP 9] Creazione file per il Diagnostic Feature Designer...\n");
 % Combina le tabelle delle feature dai dati healthy e unhealthy.
 % (Se preferisci usare solo i dati healthy, sostituisci 'data_feature_Table_unhealthy'
 % con una tabella vuota o ometti questa parte.)

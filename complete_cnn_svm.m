@@ -220,41 +220,35 @@ options = trainingOptions('rmsprop', ...
 %% Addestramento del modello
 net = trainNetwork(XTrainFinal, YTrainFinal, layers, options);
 
-%% Visualizzazione interattiva delle feature con diagnosticFeatureDesigner
-% Estrai le feature dai dati di training dal layer 'relu_fc1'
-featuresTrain = activations(net, XTrainFinal, 'relu_fc1', 'OutputAs', 'rows');
-% Avvia diagnosticFeatureDesigner per esplorare le feature insieme alle etichette
-diagnosticFeatureDesigner(featuresTrain, cellstr(YTrainFinal));
-
-%% Valutazione sul validation set
+%% Valutazione sul validation/training set
 YPredVal = classify(net, XVal);
 accuracyVal = mean(YPredVal == YVal);
 fprintf('Validation accuracy: %.4f\n', accuracyVal);
 
-%% Generazione e salvataggio della matrice di confusione sul validation set
+%% Generazione e salvataggio della matrice di confusione sul validation/training set
 figure;
 cm = confusionchart(YVal, YPredVal);
 title('Confusion Matrix - Validation Set');
 saveas(cm.Parent, 'confusion_matrix.png');
 fprintf('Matrice di confusione salvata come confusion_matrix.png\n');
 
-%% Predizione sul test set
+%% Predizione sul test dataset
 YPredTest = classify(net, XTest4D);
 YPredProbs = predict(net, XTest4D);
 confidences = max(YPredProbs, [], 2);
 
-fprintf('--- Risultati sul test ---\n');
+fprintf('--- Risultati sul test dataset ---\n');
 for i = 1:numTest
     fprintf('Segmento %d (file: %s): Predetto livello = %s con confidenza = %.4f\n', ...
         i, testInfo{i}, string(YPredTest(i)), confidences(i));
 end
 
-%% Predizione sul validation set
+%% Predizione sul validation dataset
 YPredValidation = classify(net, XValidation4D);
 YPredProbsVal = predict(net, XValidation4D);
 confidencesVal = max(YPredProbsVal, [], 2);
 
-fprintf('--- Risultati sul validation set ---\n');
+fprintf('--- Risultati sul validation dataset ---\n');
 for i = 1:numValidation
     fprintf('Segmento %d (file: %s): Predetto livello = %s con confidenza = %.4f\n', ...
         i, validationInfo{i}, string(YPredValidation(i)), confidencesVal(i));
@@ -318,7 +312,14 @@ YPredTest = applyAnomalyDetection(YPredTest, featuresTest, testInfo, baseClasses
 featuresValidation = activations(net, XValidation4D, 'relu_fc1', 'OutputAs', 'rows');
 YPredValidation = applyAnomalyDetection(YPredValidation, featuresValidation, validationInfo, baseClasses, missingMap, svmModels, threshold);
 
-%% --- Creazione submission.csv in formato PHM Challenge ---
+% Salva tutte le feature in un unico file .mat
+save('diagnosticFeatureTable_cnn_svm.mat', 'featuresTrain', 'featuresTest', 'featuresValidation', ...
+    'YPredTest', 'YPredValidation', 'YPredProbs', 'YPredProbsVal', 'YTrainFinal', 'YVal', ...
+    'meanChannels', 'stdChannels', 'svmModels', 'threshold');
+fprintf('Tutte le feature usate sono state salvate in diagnosticFeatureTable_cnn_svm.mat\n');
+diagnosticFeatureTable = load('diagnosticFeatureTable_cnn_svm.mat');
+
+%% --- Creazione submission_cnn_svm.csv in formato PHM Challenge ---
 
 % Le classi "viste" nel training e il corrispondente indice di colonna (1-based) 
 %  per prob_0 ... prob_10
@@ -418,7 +419,7 @@ submission_table_test = array2table(submission_final_test, 'VariableNames', subm
 writetable(submission_table_test, 'submission_cnn_svm.csv');
 fprintf('File submission_cnn_svm.csv generato con %d righe.\n', height(submission_table_test));
 
-%% Generazione della submission per la validazione
+%% Generazione del submission per il validation dataset
 numValidation = size(XValidation4D,4);
 prob_matrix_val = zeros(numValidation, 11);
 confidence_binary_val = zeros(numValidation,1);
