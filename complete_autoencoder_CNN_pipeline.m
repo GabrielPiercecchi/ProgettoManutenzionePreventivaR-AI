@@ -281,43 +281,48 @@ fprintf("File submission_cnn.csv creato.\n");
 %% =============================================================================
 % STEP 8: CARICAMENTO DATI VALIDATION ED ELABORAZIONE (CREAZIONE CSV)
 %% =============================================================================
-%fprintf("\n[STEP 8] Caricamento dati VALIDATION...\n");
-%main_path_val = "B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_validation_data\";
-%dataTable_val = load_data_by_level(main_path_val);
-%fprintf('Numero di file validation caricati: %d\n', height(dataTable_val));
+fprintf("\n[STEP 8] Caricamento dati VALIDATION...\n");
+main_path_val = "B - PHM America 2023 - Dataset\Data_Challenge_PHM2023_validation_data\";
+dataTable_val = load_data_by_level(main_path_val);
+fprintf('Numero di file validation caricati: %d\n', height(dataTable_val));
 
-%fprintf("Segmentazione dei dati validation...\n");
-%[XVal, nSegPerFile_val] = createSegmentsFromTableMulti(dataTable_val, axisNames, samplesPerSeg, overlap);
-%numChannels = length(axisNames);
-%XVal = reshape(XVal, [samplesPerSeg, numChannels, 1, size(XVal,4)]);
-%fprintf('Segmenti validation totali: %d\n', size(XVal,4));
+% Estrazione delle feature unhealthy
+[feature_Table_validation, data_feature_Table_validation] = extract_features(dataTable_val);
+fprintf("Feature extraction (validation) completata.\n");
 
-%fprintf("\n[STEP 8] Elaborazione dati validation e creazione file CSV...\n");
-%XRecon_val = predict(net, XVal);
-%reconstructionError_val = mean((XRecon_val - XVal).^2, [1 2]);
-%reconstructionError_val = squeeze(reconstructionError_val);
+fprintf("Segmentazione dei dati validation...\n");
+[XVal, nSegPerFile_val] = createSegmentsFromTableMulti(dataTable_val, axisNames, samplesPerSeg, overlap);
+numChannels = length(axisNames);
+XVal = reshape(XVal, [samplesPerSeg, numChannels, 1, size(XVal,4)]);
+fprintf('Segmenti validation totali: %d\n', size(XVal,4));
 
-%Seg_val = numel(reconstructionError_val);
-%predictedLevels_val = zeros(nSeg_val,1);
-%probMatrix_val = zeros(nSeg_val, 11);
-%confVec_val = zeros(nSeg_val,1);
-%for i = 1:nSeg_val
-%    err = reconstructionError_val(i);
-%    predictedLevels_val(i) = mapErrorToSeverity(err, soglia, healthy_std);
-%    probMatrix_val(i,:) = levelToProbability(predictedLevels_val(i));
-%    confVec_val(i) = computeConfidence(err, soglia, healthy_std);
-%end
+fprintf("\n[STEP 8] Elaborazione dati validation e creazione file CSV...\n");
+XRecon_val = predict(net, XVal);
+reconstructionError_val = mean((XRecon_val - XVal).^2, [1 2]);
+reconstructionError_val = squeeze(reconstructionError_val);
 
-%fprintf("Livello medio predetto (validation): %.2f\n", mean(predictedLevels_val));
-%fprintf("Percentuale di segmenti validation con alta confidenza: %.2f%%\n", 100*mean(confVec_val));
+Seg_val = numel(reconstructionError_val);
+predictedLevels_val = zeros(Seg_val,1);
+probMatrix_val = zeros(Seg_val, 11);
+confVec_val = zeros(Seg_val,1);
+for i = 1:Seg_val
+    err = reconstructionError_val(i);
+    predictedLevels_val(i) = mapErrorToSeverity(err, soglia, healthy_std);
+    probMatrix_val(i,:) = levelToProbability(predictedLevels_val(i));
+    confVec_val(i) = computeConfidence(err, soglia, healthy_std);
+end
 
-%sample_ids_val = (1:nSeg_val)';
-%submission_val = [sample_ids_val, probMatrix_val, confVec_val];
+fprintf("Livello medio predetto (validation): %.2f\n", mean(predictedLevels_val));
+fprintf("Percentuale di segmenti validation con alta confidenza: %.2f%%\n", 100*mean(confVec_val));
+
+sample_ids_val = (1:Seg_val)';
+submission_val = [sample_ids_val, probMatrix_val, confVec_val];
+
 % Creazione tabella con header per submission_validation
-%colNames = {'sample_id','prob_0','prob_1','prob_2','prob_3','prob_4','prob_5','prob_6','prob_7','prob_8','prob_9','prob_10','confidence'};
-%T_sub_val = array2table(submission_val, 'VariableNames', colNames);
-%writetable(T_sub_val, 'submission_validation.csv');
-%fprintf("File submission_validation_cnn.csv creato.\n");
+colNames = {'sample_id','prob_0','prob_1','prob_2','prob_3','prob_4','prob_5','prob_6','prob_7','prob_8','prob_9','prob_10','confidence'};
+T_sub_val = array2table(submission_val, 'VariableNames', colNames);
+writetable(T_sub_val, 'submission_validation_cnn.csv');
+fprintf("File submission_validation_cnn.csv creato.\n");
 
 %% =============================================================================
 % STEP 9: Tuning & Analisi: Visualizzazione di threshold alternativi e statistiche
@@ -354,7 +359,7 @@ fprintf("\n[STEP 10] Creazione file per il Diagnostic Feature Designer...\n");
 % Combina le tabelle delle feature dai dati healthy e unhealthy.
 % (Se preferisci usare solo i dati healthy, sostituisci 'data_feature_Table_unhealthy'
 % con una tabella vuota o ometti questa parte.)
-diagnosticFeatureTable = [data_feature_Table_healthy; data_feature_Table_unhealthy];
+diagnosticFeatureTable = [data_feature_Table_healthy; data_feature_Table_unhealthy; data_feature_Table_validation];
 
 % Salva la tabella in un file MAT che può essere caricato in Diagnostic Feature Designer
 save('diagnosticFeatureTable_cnn.mat', 'diagnosticFeatureTable', '-v7.3');
@@ -498,6 +503,7 @@ function dataTable = load_data_by_level(main_path, varargin)
     end
     fprintf("  [load_data_by_level] File filtrati: %d\n", numel(data_cell));
     Fs = 20480; % Sample rate
+    % La funzione datatable è una funzione che crea una tabella unificata a partire da una cell array di strutture
     dataTable = datatable(data_cell, Fs);
 end
 
